@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Marked.js для парсинга Markdown -->
+ <script src="/assets/js/marked.min.js"></script>   
+    <style>
+        .itronik-chat-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 0;
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .itronik-chat-header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            color: white;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .itronik-chat-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 5px 0;
+        }
+
+        .itronik-chat-header p {
+            font-size: 12px;
+            opacity: 0.8;
+            margin: 0;
+        }
+
+        .itronik-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .itronik-message {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .itronik-message.user {
+            justify-content: flex-end;
+        }
+
+        .itronik-message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .itronik-message.user .itronik-message-bubble {
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .itronik-message.assistant .itronik-message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* НОВОЕ: Стили для Markdown */
+        .itronik-message-bubble h1,
+        .itronik-message-bubble h2,
+        .itronik-message-bubble h3,
+        .itronik-message-bubble h4 {
+            margin: 10px 0 8px 0;
+            font-weight: 600;
+        }
+
+        .itronik-message-bubble h1 { font-size: 18px; }
+        .itronik-message-bubble h2 { font-size: 16px; }
+        .itronik-message-bubble h3 { font-size: 14px; }
+        .itronik-message-bubble h4 { font-size: 13px; }
+
+        .itronik-message-bubble p {
+            margin: 8px 0;
+        }
+
+        .itronik-message-bubble ul,
+        .itronik-message-bubble ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .itronik-message-bubble li {
+            margin: 4px 0;
+        }
+
+        .itronik-message-bubble strong {
+            font-weight: 600;
+        }
+
+        .itronik-message-bubble em {
+            font-style: italic;
+        }
+
+        .itronik-message-bubble code {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .itronik-message-bubble pre {
+            background: rgba(0,0,0,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .itronik-message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .itronik-message-bubble a {
+            color: #007bff;
+            text-decoration: underline;
+        }
+
+        .itronik-message.user .itronik-message-bubble a {
+            color: white;
+        }
+
+        .itronik-message-bubble blockquote {
+            border-left: 3px solid rgba(0,0,0,0.2);
+            padding-left: 12px;
+            margin: 8px 0;
+            opacity: 0.8;
+        }
+
+        .itronik-typing {
+            display: flex;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .itronik-typing span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+            animation: bounce 1.4s infinite;
+        }
+
+        .itronik-typing span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .itronik-typing span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .itronik-chat-input {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            flex-shrink: 0;
+        }
+
+        .itronik-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .itronik-chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            background: white;
+        }
+
+        .itronik-chat-input button {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .itronik-chat-input button:hover:not(:disabled) {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .itronik-chat-input button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .itronik-welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+        }
+
+        .itronik-welcome h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .itronik-welcome p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="itronik-chat-container" id="itronikChat">
+        <div class="itronik-chat-header">
+            <h2 id="chatTitle">Загрузка...</h2>
+            <p id="chatSubtitle">Ваш цифровой консультант</p>
+        </div>
+
+        <div class="itronik-chat-messages" id="chatMessages">
+            <div class="itronik-welcome">
+                <h3>👋 Привет!</h3>
+                <p>Загружаю историю диалога...</p>
+            </div>
+        </div>
+
+        <div class="itronik-chat-input">
+            <div class="itronik-input-wrapper">
+                <input 
+                    id="messageInput" 
+                    type="text" 
+                    placeholder="Напишите сообщение..."
+                    maxlength="500"
+                />
+                <button id="sendButton">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Настраиваем marked.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        class ItronikChat {
+            constructor(agentId, agentName) {
+                this.agentId = agentId;
+                this.agentName = agentName;
+                this.messages = [];
+                this.conversationId = null;
+                this.sessionId = this.getOrCreateSessionId();
+                this.isProcessing = false;
+                this.lastMessageId = 0;
+                this.pollInterval = null;
+                this.historyLoaded = false;
+                
+                this.messagesContainer = document.getElementById('chatMessages');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                
+                this.init();
+            }
+
+            getOrCreateSessionId() {
+                let sid = localStorage.getItem('itronik_session');
+                if (!sid) {
+                    sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('itronik_session', sid);
+                }
+                return sid;
+            }
+
+            async init() {
+                document.getElementById('chatTitle').textContent = this.agentName;
+                
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                
+                this.messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                // НОВОЕ: Загружаем историю диалога
+                await this.loadHistory();
+
+                // Если истории нет - показываем приветствие
+                if (!this.historyLoaded) {
+                    setTimeout(() => {
+                        this.addMessage('assistant', `Здравствуйте! Я ${this.agentName}. Чем могу помочь?`, false, true);
+                    }, 1000);
+                }
+
+                // Запускаем polling
+                this.startPolling();
+            }
+
+            // НОВАЯ ФУНКЦИЯ: Загрузка истории диалога
+            async loadHistory() {
+                try {
+                    const response = await fetch(`/api.php?action=widget_history&session_id=${this.sessionId}&agent_id=${this.agentId}`);
+                    const data = await response.json();
+
+                    if (data.conversation_id) {
+                        this.conversationId = data.conversation_id;
+                    }
+
+                    if (data.messages && data.messages.length > 0) {
+                        // Убираем welcome экран
+                        const welcome = this.messagesContainer.querySelector('.itronik-welcome');
+                        if (welcome) welcome.remove();
+
+                        // Добавляем все сообщения
+                        data.messages.forEach(msg => {
+                            this.addMessage(msg.role, msg.content, false, true);
+                            if (msg.id > this.lastMessageId) {
+                                this.lastMessageId = msg.id;
+                            }
+                        });
+
+                        this.historyLoaded = true;
+                    }
+                } catch (error) {
+                    console.error('Failed to load history:', error);
+                }
+            }
+
+            startPolling() {
+                this.pollInterval = setInterval(() => {
+                    this.checkNewMessages();
+                }, 3000);
+            }
+
+            async checkNewMessages() {
+                if (this.isProcessing) return;
+
+                try {
+                    const response = await fetch(`/api.php?action=widget_poll&session_id=${this.sessionId}&agent_id=${this.agentId}&last_message_id=${this.lastMessageId}`);
+                    const data = await response.json();
+
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            if (msg.role === 'assistant') {
+                                this.addMessage('assistant', msg.content, false, true);
+                            }
+                            if (msg.id > this.lastMessageId) {
+                                this.lastMessageId = msg.id;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }
+
+            // ОБНОВЛЕНО: Рендерим Markdown
+            addMessage(role, content, isTyping = false, skipPush = false) {
+                const welcome = this.messagesContainer.querySelector('.itronik-welcome');
+                if (welcome) welcome.remove();
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `itronik-message ${role}`;
+                
+                if (isTyping) {
+                    messageDiv.id = 'typing-indicator';
+                    messageDiv.innerHTML = `
+                        <div class="itronik-message-bubble">
+                            <div class="itronik-typing">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'itronik-message-bubble';
+                    
+                    // НОВОЕ: Парсим Markdown для assistant, обычный текст для user
+                    if (role === 'assistant') {
+                        bubble.innerHTML = marked.parse(content);
+                    } else {
+                        bubble.textContent = content;
+                    }
+                    
+                    messageDiv.appendChild(bubble);
+                    
+                    if (!skipPush) {
+                        this.messages.push({ role, content });
+                    }
+                }
+                
+                this.messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            removeTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+            }
+
+            scrollToBottom() {
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                
+                if (!message || this.isProcessing) return;
+
+                this.isProcessing = true;
+                this.sendButton.disabled = true;
+
+                this.addMessage('user', message);
+                this.messageInput.value = '';
+
+                this.addMessage('assistant', '', true);
+
+                try {
+                    const response = await fetch('/api.php?action=widget_send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            session_id: this.sessionId,
+                            message: message,
+                            conversation_id: this.conversationId,
+                            agent_id: this.agentId,
+                            agent_name: this.agentName
+                        })
+                    });
+
+                    this.removeTypingIndicator();
+
+                    if (!response.ok) {
+                        throw new Error('Ошибка сервера');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    const assistantMessage = data.response || 'Извините, не смог обработать ваш запрос.';
+                    
+                    this.addMessage('assistant', assistantMessage);
+
+                    if (data.conversation_id) {
+                        this.conversationId = data.conversation_id;
+                    }
+
+                    if (data.message_id) {
+                        this.lastMessageId = data.message_id;
+                    }
+
+                } catch (error) {
+                    this.removeTypingIndicator();
+                    console.error('Chat error:', error);
+                    this.addMessage('assistant', 'Извините, произошла ошибка. Попробуйте ещё раз.');
+                } finally {
+                    this.isProcessing = false;
+                    this.sendButton.disabled = false;
+                    this.messageInput.focus();
+                }
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const agentId = urlParams.get('agent_id') || 'agent_KtAEbBRT3mHG_KpP-L8na';
+        const agentName = urlParams.get('agent_name') || 'Итроник';
+
+        const chat = new ItronikChat(agentId, agentName);
+    </script>
+</body>
+</html>

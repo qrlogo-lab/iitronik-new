@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ИТРОНИК — цифровой двойник</title>
+<link rel="icon" type="image/png"  href="/img/ii-logo.png">
+  <!-- Шрифты и иконки -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Play:wght@400;700&family=Pacifico&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { background: #0a0033; font-family: 'Montserrat', sans-serif; }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
+    select option { background: #0a0033; color: white; }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,.35); }
+    input:focus, textarea:focus, select:focus { border-color: rgba(33,212,253,.5) !important; }
+
+    /* ── Цветовые токены ── */
+    :root {
+      --bg: #0a0033;
+      --bgDeep: #05001a;
+      --pink: #ff00c8;
+      --cyan: #21d4fd;
+      --card: rgba(255,255,255,0.06);
+      --cardHi: rgba(255,255,255,0.10);
+      --border: rgba(255,255,255,0.12);
+      --muted: rgba(255,255,255,0.55);
+      --grad: linear-gradient(220deg,#30acf7 0%,#842ff3 100%);
+      --gradPink: linear-gradient(135deg,#ff00c8,#21d4fd);
+    }
+    /* ===== SAFE AREA ДЛЯ IPHONE ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Адаптация для iPhone с вырезом */
+@supports (padding: max(0px)) {
+  #app {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+  
+  nav.bottom {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  
+  .slide-menu {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Дополнительная защита для iPhone */
+@media screen and (max-width: 480px) {
+  nav.bottom {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .bottom-cta button {
+    padding: 12px 10px;
+    font-size: 11px;
+  }
+}
+
+    /* ── Общий контейнер ── */
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  max-height: 100vh;
+  height: 100dvh; /* динамическая высота для Safari */
+  max-height: 100dvh;
+  margin: 0 auto;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+    /* ── Шапка ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,0,51,.95);
+      backdrop-filter: blur(12px);
+      position: relative;
+      z-index: 100;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      line-height: 1;
+      gap: 0;
+    }
+    .logo .ii {
+      font-family: 'Pacifico', cursive;
+      font-size: 28px;
+      color: white;
+      letter-spacing: 2px;
+    }
+    .logo .tronik {
+      font-family: 'Montserrat', sans-serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 22px;
+      color: white;
+    }
+    .header-icons {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .header-icons a {
+      color: rgba(255,255,255,.55);
+      font-size: 17px;
+      transition: color .2s;
+      text-decoration: none;
+    }
+    .header-icons a:hover { color: var(--cyan) !important; }
+    .menu-toggle {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Контент ── */
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .page {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      padding: 0;
+    }
+    .page.active {
+      display: flex;
+    }
+
+    /* ── Страница чата (виджет) ── */
+.page-chat {
+  padding: 0 !important;
+}
+
+.page-chat iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+    /* ── Остальные страницы с отступами ── */
+    .page:not(.page-chat) {
+      padding: 0 12px 12px;
+    }
+
+    /* ── Нижняя навигация ── */
+nav.bottom {
+  flex-shrink: 0;
+  padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 14px));
+  border-top: 1px solid var(--border);
+  background: rgba(10,0,51,.97);
+  backdrop-filter: blur(12px);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 14px));
+}
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 10px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: all .2s;
+      color: var(--muted);
+      flex-shrink: 0;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .tab-btn.active {
+      color: var(--cyan);
+    }
+    .tab-btn i { font-size: 18px; }
+    .tab-btn span { font-size: 10px; font-weight: 400; }
+    .tab-btn.active span { font-weight: 700; }
+    .tab-indicator {
+      width: 16px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--cyan);
+      margin-top: 2px;
+      display: none;
+    }
+    .tab-btn.active .tab-indicator { display: block; }
+
+    .bottom-cta {
+      display: flex;
+      gap: 8px;
+    }
+    .bottom-cta button {
+      flex: 1;
+      padding: 11px 10px;
+      border-radius: 24px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+    }
+    .bottom-cta .btn-outline {
+      background: rgba(255,255,255,.06);
+      border: 1.5px solid var(--border);
+      color: white;
+    }
+    .bottom-cta .btn-grad {
+      background: var(--grad);
+      color: white;
+      font-weight: 700;
+    }
+
+    /* ── Бургер-меню (оверлей) ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 200;
+      backdrop-filter: blur(4px);
+      display: none;
+    }
+    .overlay.open { display: block; }
+
+    .slide-menu {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 75%;
+      max-width: 300px;
+      height: 100vh;
+      background: var(--bgDeep);
+      z-index: 300;
+      transition: right .3s ease;
+      box-shadow: -8px 0 40px rgba(0,0,0,.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .slide-menu.open { right: 0; }
+    .slide-menu .menu-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .slide-menu .menu-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .slide-menu .menu-body .section-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 14px 12px;
+      border-radius: 14px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all .2s;
+      border-left: 3px solid transparent;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      color: white;
+      text-align: left;
+    }
+    .menu-item.active {
+      background: rgba(33,212,253,.15);
+      border-left-color: var(--cyan);
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    .menu-item i {
+      width: 20px;
+      text-align: center;
+      font-size: 18px;
+      color: var(--muted);
+    }
+    .menu-item.active i { color: var(--cyan); }
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+    .menu-social a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      color: rgba(255,255,255,.75);
+      font-size: 14px;
+      text-decoration: none;
+      font-family: 'Montserrat', sans-serif;
+      margin-bottom: 4px;
+      transition: all .2s;
+    }
+    .menu-social a i {
+      width: 20px;
+      text-align: center;
+      font-size: 18px;
+    }
+    .menu-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .menu-footer .btn-order {
+      width: 100%;
+      padding: 13px;
+      border-radius: 24px;
+      border: none;
+      background: var(--grad);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .menu-footer .copy {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    /* ── Страница возможностей ── */
+    .cases-hero {
+      text-align: center;
+      padding: 20px 0 16px;
+    }
+    .cases-hero h2 {
+      font-family: 'Play', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .cases-hero h2 span { color: var(--cyan); }
+    .cases-hero p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .quote-block {
+      background: linear-gradient(135deg,rgba(255,0,200,.08),rgba(33,212,253,.08));
+      border-left: 3px solid var(--cyan);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .quote-block .text {
+      font-style: italic;
+      font-size: 13px;
+      color: white;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+    .quote-block .author {
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    .case-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all .25s;
+      margin-bottom: 8px;
+    }
+    .case-card.open {
+      background: var(--cardHi);
+      border-color: rgba(33,212,253,.4);
+    }
+    .case-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+    }
+    .case-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .case-icon i { font-size: 18px; }
+    .case-title {
+      font-family: 'Play', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: white;
+      flex: 1;
+    }
+    .case-chevron {
+      color: var(--muted);
+      font-size: 11px;
+      transition: transform .25s;
+    }
+    .case-card.open .case-chevron { transform: rotate(180deg); }
+    .case-body {
+      display: none;
+      padding: 0 16px 14px;
+    }
+    .case-card.open .case-body { display: block; }
+    .case-body ul {
+      list-style: none;
+      margin: 0 0 10px;
+    }
+    .case-body ul li {
+      padding: 6px 0;
+      font-size: 13px;
+      color: rgba(255,255,255,.85);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .case-body ul li i {
+      font-size: 11px;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+    .case-body .example {
+      background: rgba(255,255,255,.07);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-style: italic;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .soon-block {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .soon-block p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .soon-avatars {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+    }
+    .soon-avatars .item {
+      text-align: center;
+    }
+    .soon-avatars .avatar-circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 6px;
+    }
+    .soon-avatars .avatar-circle i {
+      font-size: 26px;
+      color: rgba(255,255,255,.2);
+    }
+    .soon-avatars .name {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ── Страница FAQ ── */
+    .faq-hero {
+      text-align: center;
+      padding: 20px 0 16px;
+    }
+    .faq-hero h2 {
+      font-family: 'Play', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .faq-hero h2 span { color: var(--pink); }
+    .faq-hero p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .faq-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all .25s;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .faq-item.open {
+      background: var(--cardHi);
+      border-color: rgba(33,212,253,.35);
+    }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+    .faq-q .text {
+      font-family: 'Play', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: white;
+      flex: 1;
+      line-height: 1.3;
+    }
+    .faq-q .text i {
+      color: var(--cyan);
+      margin-right: 8px;
+      font-size: 13px;
+    }
+    .faq-q .sign {
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-q .text { color: var(--cyan); }
+    .faq-a {
+      display: none;
+      padding: 0 16px 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,.85);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-a .inner { padding-top: 10px; }
+
+    .contact-block {
+      margin-top: 20px;
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+    .contact-block .title {
+      font-size: 13px;
+      color: white;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .contact-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .contact-btns button {
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.05);
+      color: white;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .contact-btns button i { font-size: 20px; }
+
+    /* ── Страница заявки ── */
+    .order-hero {
+      text-align: center;
+      padding: 20px 0 16px;
+    }
+    .order-hero h2 {
+      font-family: 'Play', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .order-hero h2 span { color: var(--pink); }
+    .order-hero p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .benefits {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .benefit {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+    }
+    .benefit i {
+      color: var(--cyan);
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .benefit span {
+      font-size: 13px;
+      color: white;
+    }
+
+    .order-form {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .order-form .field label {
+      font-size: 11px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .order-form .field input,
+    .order-form .field select {
+      width: 100%;
+      padding: 13px 15px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: white;
+      font-size: 14px;
+      font-family: 'Montserrat', sans-serif;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .order-form .field select { appearance: none; }
+    .order-form .agree {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .order-form .agree .check {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .order-form .agree .check.checked {
+      border-color: var(--cyan);
+      background: var(--cyan);
+    }
+    .order-form .agree .check i {
+      font-size: 11px;
+      color: #0a0033;
+      display: none;
+    }
+    .order-form .agree .check.checked i { display: block; }
+    .order-form .agree .label {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .order-form .submit-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 30px;
+      border: none;
+      background: rgba(255,255,255,.1);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: .5;
+    }
+    .order-form .submit-btn.active {
+      background: var(--grad);
+      opacity: 1;
+    }
+    .order-form .note {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .order-success {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 24px;
+      text-align: center;
+    }
+    .order-success .icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--gradPink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    .order-success h2 {
+      font-family: 'Play', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 12px;
+    }
+    .order-success p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .order-success .social-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .order-success .social-btns button {
+      padding: 10px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.05);
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Скрытие/показ ── */
+    .hidden { display: none !important; }
+    .flex-col { display: flex; flex-direction: column; }
+    /* ===== ЗАГОЛОВОК НАД ВИДЖЕТОМ ===== */
+.chat-header-section {
+  flex-shrink: 0;
+  height: 15vh;
+  min-height: 100px;
+  max-height: 180px;
+  padding: 16px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(10,0,51,0.95) 0%, rgba(10,0,51,0.6) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.4s ease;
+  overflow: hidden;
+}
+
+/* Скрытое состояние */
+.chat-header-section.hidden {
+  height: 0;
+  min-height: 0;
+  max-height: 0;
+  padding: 0;
+  opacity: 0;
+  border-bottom: none;
+}
+.chat-title {
+  font-family: 'Play', sans-serif;
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.chat-title .highlight {
+  background: linear-gradient(135deg, #ff00c8, #21d4fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.chat-subtitle {
+  font-size: clamp(11px, 1.5vw, 14px);
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Виджет занимает оставшееся место */
+.widget-wrapper {
+  flex: 1;
+  padding: 0 12px 12px;
+  min-height: 0;
+}
+
+.widget-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  display: block;
+}
+@media screen and (max-width: 480px) {
+  .chat-header-section {
+    min-height: 60px !important;
+    max-height: 90px !important;
+    padding: 8px 12px 6px !important;
+  }
+  
+  .chat-title {
+    font-size: 16px !important;
+  }
+  
+  .chat-subtitle {
+    font-size: 10px !important;
+  }
+  
+  .widget-wrapper iframe {
+    min-height: 350px !important;
+    height: calc(100vh - 200px) !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+  }
+  .widget-wrapper {
+    padding: 0 8px 8px;
+  }
+}
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ШАПКА -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="logo">
+      <span class="ii">ii</span><span class="tronik">троник</span>
+    </div>
+    <div class="header-icons">
+      <a href="#" class="fab fa-telegram" style="color:#2CA5E0"></a>
+      <a href="#" class="fab fa-whatsapp" style="color:#25D366"></a>
+      <a href="#" class="fab fa-vk" style="color:#4A76A8"></a>
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- КОНТЕНТ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div id="content">
+
+    <!-- ─── СТРАНИЦА 0: ЧАТ (виджет) ──────────────────────── -->
+<!-- ─── СТРАНИЦА 0: ЧАТ (виджет) ──────────────────────── -->
+<div id="page-0" class="page page-chat active">
+  <!-- Заголовок (25% от высоты экрана) -->
+  <div class="chat-header-section">
+    <h1 class="chat-title">Поговорите с <span class="highlight">Дональдом Трампом</span></h1>
+    <p class="chat-subtitle">Задайте вопрос о бизнесе, переговорах или лидерстве — получите ответ в стиле Трампа</p>
+  </div>
+  
+  <!-- Виджет -->
+  <div class="widget-wrapper">
+    <iframe 
+      src="/widget/chat-mobile.html?agent_id=agent_cAg5T0OgoYgl9L07mbbpE&agent_name=Дональд Трамп"
+      style="width: 100%; height: 100%; border: none; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);"
+    ></iframe>
+  </div>
+</div>
+
+    <!-- ─── СТРАНИЦА 1: ВОЗМОЖНОСТИ ────────────────────────── -->
+    <div id="page-1" class="page">
+      <div class="cases-hero">
+        <h2>Что ИТРОНИК делает <span>вместо вас</span>?</h2>
+        <p>Нажмите на карточку, чтобы раскрыть подробности</p>
+      </div>
+
+      <div class="quote-block">
+        <div class="text">«Я заказал цифровую копию не для того, чтобы она отвечала на вопросы. А чтобы она думала так же, как думаю я.»</div>
+        <div class="author">— Брайан Халлиган, сооснователь HubSpot ($30 млрд)</div>
+      </div>
+
+      <div id="casesContainer">
+        <!-- Карточки генерируются JS -->
+      </div>
+
+      <div class="soon-block">
+        <p>Скоро можно будет поговорить с итрониками:</p>
+        <div class="soon-avatars">
+          <div class="item"><div class="avatar-circle"><i class="fas fa-user-circle"></i></div><div class="name">Стив Джобс</div></div>
+          <div class="item"><div class="avatar-circle"><i class="fas fa-user-circle"></i></div><div class="name">Джефф Безос</div></div>
+          <div class="item"><div class="avatar-circle"><i class="fas fa-user-circle"></i></div><div class="name">Илон Маск</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── СТРАНИЦА 2: FAQ ──────────────────────────────────── -->
+    <div id="page-2" class="page">
+      <div class="faq-hero">
+        <h2>Частые <span>вопросы</span></h2>
+        <p>Всё, что хотели узнать об ИТРОНИКЕ</p>
+      </div>
+
+      <div id="faqContainer">
+        <!-- FAQ генерируются JS -->
+      </div>
+
+      <div class="contact-block">
+        <div class="title">Есть другой вопрос?</div>
+        <div class="contact-btns">
+          <button><i class="fab fa-telegram" style="color:#2CA5E0"></i>Telegram</button>
+          <button><i class="fab fa-whatsapp" style="color:#25D366"></i>WhatsApp</button>
+          <button><i class="fab fa-vk" style="color:#4A76A8"></i>VK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── СТРАНИЦА 3: ЗАЯВКА ────────────────────────────────── -->
+    <div id="page-3" class="page">
+      <div class="order-hero">
+        <h2>Готовы получить <span>своего ИТРОНИКА</span>?</h2>
+        <p>Оставьте заявку — расскажем, как получить вашего цифрового двойника</p>
+      </div>
+
+      <div class="benefits">
+        <div class="benefit"><i class="fas fa-clock"></i><span>Работает 24/7 без вас</span></div>
+        <div class="benefit"><i class="fas fa-brain"></i><span>Думает так, как думаете вы</span></div>
+        <div class="benefit"><i class="fas fa-shield-halved"></i><span>Вы всегда сохраняете контроль</span></div>
+        <div class="benefit"><i class="fas fa-star"></i><span>Первые эксперты — на особых условиях</span></div>
+      </div>
+
+      <div class="order-form" id="orderForm">
+        <div class="field">
+          <label>Ваше имя *</label>
+          <input type="text" id="orderName" placeholder="Иван Иванов" />
+        </div>
+        <div class="field">
+          <label>Telegram / WhatsApp / Email *</label>
+          <input type="text" id="orderContact" placeholder="@username или email" />
+        </div>
+        <div class="field">
+          <label>Ваша роль</label>
+          <select id="orderRole">
+            <option>Бизнес-коуч / Консультант</option>
+            <option>Эксперт / Спикер</option>
+            <option>Руководитель / CEO</option>
+            <option>Нутрициолог / Фитнес</option>
+            <option>Психолог / Терапевт</option>
+            <option>Другая роль</option>
+          </select>
+        </div>
+        <div class="agree" id="agreeBox">
+          <div class="check" id="agreeCheck"><i class="fas fa-check"></i></div>
+          <span class="label">Согласен(на) на обработку персональных данных</span>
+        </div>
+        <button class="submit-btn" id="orderSubmit"><i class="fas fa-rocket"></i> Хочу своего ИТРОНИКА</button>
+        <div class="note">Обычно отвечаем в течение 2 часов в рабочее время</div>
+      </div>
+
+      <!-- Блок успеха (скрыт) -->
+      <div id="orderSuccess" class="order-success hidden">
+        <div class="icon">🚀</div>
+        <h2>Заявка отправлена!</h2>
+        <p>Скоро свяжемся с вами и расскажем,<br />как создать вашего цифрового двойника.</p>
+        <div class="social-btns">
+          <button><i class="fab fa-telegram" style="color:#2CA5E0"></i>Telegram</button>
+          <button><i class="fab fa-whatsapp" style="color:#25D366"></i>WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- #content -->
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <nav class="bottom">
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-page="0"><i class="fas fa-comments"></i><span>Чат</span><div class="tab-indicator"></div></button>
+      <button class="tab-btn" data-page="1"><i class="fas fa-briefcase"></i><span>Возможности</span><div class="tab-indicator"></div></button>
+      <button class="tab-btn" data-page="2"><i class="fas fa-circle-question"></i><span>FAQ</span><div class="tab-indicator"></div></button>
+      <button class="tab-btn" data-page="3"><i class="fas fa-rocket"></i><span>Заявка</span><div class="tab-indicator"></div></button>
+    </div>
+
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ОВЕРЛЕЙ И БУРГЕР-МЕНЮ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="overlay" id="overlay"></div>
+  <div class="slide-menu" id="slideMenu">
+    <div class="menu-header">
+      <div class="logo"><span class="ii">ii</span><span class="tronik">троник</span></div>
+      <button class="menu-toggle" id="menuClose"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="menu-body">
+      <div class="section-label">Разделы</div>
+      <button class="menu-item active" data-page="0"><i class="fas fa-comments"></i>Чат</button>
+      <button class="menu-item" data-page="1"><i class="fas fa-briefcase"></i>Возможности</button>
+      <button class="menu-item" data-page="2"><i class="fas fa-circle-question"></i>FAQ</button>
+      <button class="menu-item" data-page="3"><i class="fas fa-rocket"></i>Заявка</button>
+
+      <div class="menu-divider"></div>
+      <div class="section-label">Связаться</div>
+      <div class="menu-social">
+        <a href="#"><i class="fab fa-telegram" style="color:#2CA5E0"></i>Telegram</a>
+        <a href="#"><i class="fab fa-whatsapp" style="color:#25D366"></i>WhatsApp</a>
+        <a href="#"><i class="fab fa-vk" style="color:#4A76A8"></i>VK</a>
+        <a href="#"><i class="fas fa-envelope" style="color:#21d4fd"></i>hello@itronik.ru</a>
+      </div>
+    </div>
+    <div class="menu-footer">
+      <button class="btn-order" id="menuOrderBtn"><i class="fas fa-rocket"></i> Заказать ИТРОНИКА</button>
+      <div class="copy">© 2026 ИТРОНИК. Все права защищены.</div>
+    </div>
+  </div>
+
+</div> <!-- #app -->
+
+<script>
+  // ════════════════════════════════════════════════════════════════════
+  // ДАННЫЕ (только для страниц Возможности, FAQ, Заявка)
+  // ════════════════════════════════════════════════════════════════════
+
+  const CASES = [
+    { icon: 'fa-briefcase', color: '#21d4fd', title: 'Ведёт бизнес',
+      items: ['Проводит консультации с клиентами','Согласовывает проекты','Принимает решения по стандартным кейсам','Ведёт переписку от вашего имени'],
+      example: 'Бизнес-коуч провёл 15 сессий за неделю — сам коуч провёл 0. Он был на Бали.' },
+    { icon: 'fa-bullseye', color: '#ff00c8', title: 'Принимает решения',
+      items: ['Оценивает предложения партнёров','Выбирает подрядчиков','Расставляет приоритеты','Говорит «нет» мусорным запросам'],
+      example: 'CEO делегировал оперативку ИТРОНИКУ. Прибыль +40% за квартал.' },
+    { icon: 'fa-pen-fancy', color: '#21d4fd', title: 'Создаёт контент',
+      items: ['Пишет посты с вашим мышлением','Создаёт статьи с вашей экспертизой','Генерирует письма клиентам','Формулирует оффер как вы'],
+      example: '20 постов за вечер — ИТРОНИК написал, эксперт только одобрил.' },
+    { icon: 'fa-chalkboard-user', color: '#ff00c8', title: 'Обучает команду',
+      items: ['Даёт указания сотрудникам','Объясняет вашу методологию','Оценивает результаты работы','Проводит разборы проектов'],
+      example: 'Команда из 10 человек обучается без участия руководителя.' },
+    { icon: 'fa-dollar-sign', color: '#21d4fd', title: 'Зарабатывает',
+      items: ['Проводит платные консультации','Продаёт ваши продукты/услуги','Квалифицирует лиды','Закрывает типовые сделки'],
+      example: '50 заявок за ночь — ИТРОНИК квалифицировал и назначил встречи.' },
+    { icon: 'fa-gavel', color: '#ff00c8', title: 'Критикует идеи',
+      items: ['Оценит идею ДО показа','Найдёт слабые места в проекте','Предскажет возражения','Поможет подготовиться к разговору'],
+      example: 'Правок стало в 10 раз меньше после фильтра ИТРОНИКОМ.' },
+    { icon: 'fa-infinity', color: '#21d4fd', title: 'Ваше наследие',
+      items: ['Ваш ИТРОНИК будет жить вечно','Дети смогут спросить совета','Команда будет учиться у вас','Ваша экспертиза не исчезнет'],
+      example: 'Внуки смогут спросить совета у основателя в 2050 году.' }
+  ];
+
+  const FAQS = [
+    { q: 'Чем ИТРОНИК отличается от чат-бота?',
+      a: 'Чат-бот работает по скриптам. ИТРОНИК обучается на вашей ЖИЗНИ: записи консультаций, статьи, книги, посты, реальные кейсы. Результат — цифровой клон вашего мышления.' },
+    { q: 'ИТРОНИК меня заменит?',
+      a: 'Нет. Он вас КЛОНИРУЕТ. Вас станет двое: один делает уникальное, второй — типовое. Вы сохраняете контроль и видите все его действия.' },
+    { q: 'Он может принимать решения?',
+      a: 'Да, но только те, которым вы его научите. Новое и сложное — передаст вам. Вы сами задаёте границы самостоятельности.' },
+    { q: 'А если он ошибётся?',
+      a: 'Вы видите все его действия и можете отключить в любой момент. Плюс он учится на ваших исправлениях и становится точнее.' },
+    { q: 'Какие данные нужны для обучения?',
+      a: 'Всё, что отражает ваше мышление: записи консультаций, статьи, посты, книги, кейсы, переписку. Чем больше материала — тем точнее двойник.' },
+    { q: 'Сколько времени занимает создание?',
+      a: 'От 2 недель. Зависит от объёма материалов и сложности задач, которые предстоит выполнять двойнику.' },
+    { q: 'Сколько стоит?',
+      a: 'Первые эксперты работают с нами на особых условиях. Оставьте заявку — обсудим индивидуально и быстро.' }
+  ];
+
+  const BOTTOM_BTNS = [
+    { left: '💼 Что умеет?', leftPage: 1, right: 'Заказать →', rightPage: 3 },
+    { left: '❓ FAQ',        leftPage: 2, right: 'Заказать →', rightPage: 3 },
+    { left: '📝 Заявка',    leftPage: 3, right: 'Чат с агентом', rightPage: 0 },
+    { left: '← Чат',        leftPage: 0, right: '💼 Возможности', rightPage: 1 }
+  ];
+
+  // ════════════════════════════════════════════════════════════════════
+  // СОСТОЯНИЕ И DOM
+  // ════════════════════════════════════════════════════════════════════
+  let currentPage = 0;
+  let menuOpen = false;
+
+  const pages = document.querySelectorAll('.page');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const menuItems = document.querySelectorAll('.menu-item');
+  const leftCta = document.getElementById('leftCta');
+  const rightCta = document.getElementById('rightCta');
+  const menuToggle = document.getElementById('menuToggle');
+  const menuClose = document.getElementById('menuClose');
+  const overlay = document.getElementById('overlay');
+  const slideMenu = document.getElementById('slideMenu');
+  const menuOrderBtn = document.getElementById('menuOrderBtn');
+
+  const casesContainer = document.getElementById('casesContainer');
+  const faqContainer = document.getElementById('faqContainer');
+
+  const orderName = document.getElementById('orderName');
+  const orderContact = document.getElementById('orderContact');
+  const orderRole = document.getElementById('orderRole');
+  const agreeCheck = document.getElementById('agreeCheck');
+  const agreeBox = document.getElementById('agreeBox');
+  const orderSubmit = document.getElementById('orderSubmit');
+  const orderForm = document.getElementById('orderForm');
+  const orderSuccess = document.getElementById('orderSuccess');
+
+  // ════════════════════════════════════════════════════════════════════
+  // ФУНКЦИИ НАВИГАЦИИ
+  // ════════════════════════════════════════════════════════════════════
+  function goToPage(pageIndex) {
+    currentPage = pageIndex;
+    pages.forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${pageIndex}`).classList.add('active');
+
+    tabBtns.forEach((btn, i) => btn.classList.toggle('active', i === pageIndex));
+    menuItems.forEach((item, i) => item.classList.toggle('active', i === pageIndex));
+
+    const cfg = BOTTOM_BTNS[pageIndex];
+    leftCta.textContent = cfg.left;
+    rightCta.textContent = cfg.right;
+    leftCta.dataset.target = cfg.leftPage;
+    rightCta.dataset.target = cfg.rightPage;
+
+    closeMenu();
+    document.getElementById('content').scrollTop = 0;
+  }
+
+  function openMenu() { menuOpen = true; slideMenu.classList.add('open'); overlay.classList.add('open'); }
+  function closeMenu() { menuOpen = false; slideMenu.classList.remove('open'); overlay.classList.remove('open'); }
+
+  // ════════════════════════════════════════════════════════════════════
+  // ОТРИСОВКА СТРАНИЦ (кроме виджета)
+  // ════════════════════════════════════════════════════════════════════
+  function renderCases() {
+    casesContainer.innerHTML = '';
+    CASES.forEach((c, index) => {
+      const card = document.createElement('div');
+      card.className = 'case-card';
+      card.dataset.index = index;
+      card.innerHTML = `
+        <div class="case-header">
+          <div class="case-icon" style="background:${c.color}22; color:${c.color}"><i class="fas ${c.icon}"></i></div>
+          <div class="case-title">${c.title}</div>
+          <div class="case-chevron"><i class="fas fa-chevron-down"></i></div>
+        </div>
+        <div class="case-body">
+          <ul>
+            ${c.items.map(item => `<li><i class="fas fa-check" style="color:${c.color}"></i>${item}</li>`).join('')}
+          </ul>
+          <div class="example"><i class="fas fa-chart-line" style="color:${c.color}; margin-right:6px;"></i>${c.example}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => card.classList.toggle('open'));
+      casesContainer.appendChild(card);
+    });
+  }
+
+  function renderFaq() {
+    faqContainer.innerHTML = '';
+    FAQS.forEach((f, index) => {
+      const item = document.createElement('div');
+      item.className = 'faq-item';
+      item.dataset.index = index;
+      item.innerHTML = `
+        <div class="faq-q">
+          <div class="text"><i class="fas fa-question-circle"></i>${f.q}</div>
+          <div class="sign">+</div>
+        </div>
+        <div class="faq-a"><div class="inner">${f.a}</div></div>
+      `;
+      item.addEventListener('click', () => {
+        item.classList.toggle('open');
+        const sign = item.querySelector('.sign');
+        sign.textContent = item.classList.contains('open') ? '−' : '+';
+      });
+      faqContainer.appendChild(item);
+    });
+  }
+
+  function updateSubmitButton() {
+    const name = orderName.value.trim();
+    const contact = orderContact.value.trim();
+    const agree = agreeCheck.classList.contains('checked');
+    const valid = name && contact && agree;
+    orderSubmit.classList.toggle('active', valid);
+  }
+
+  function submitOrder() {
+    if (!orderSubmit.classList.contains('active')) return;
+    orderForm.classList.add('hidden');
+    orderSuccess.classList.remove('hidden');
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // ИНИЦИАЛИЗАЦИЯ
+  // ════════════════════════════════════════════════════════════════════
+  renderCases();
+  renderFaq();
+
+  // События
+  tabBtns.forEach(btn => btn.addEventListener('click', () => goToPage(parseInt(btn.dataset.page))));
+  menuItems.forEach(item => item.addEventListener('click', () => goToPage(parseInt(item.dataset.page))));
+
+  menuOrderBtn.addEventListener('click', () => goToPage(3));
+
+  menuToggle.addEventListener('click', openMenu);
+  menuClose.addEventListener('click', closeMenu);
+  overlay.addEventListener('click', closeMenu);
+
+  orderName.addEventListener('input', updateSubmitButton);
+  orderContact.addEventListener('input', updateSubmitButton);
+  agreeBox.addEventListener('click', () => {
+    agreeCheck.classList.toggle('checked');
+    updateSubmitButton();
+  });
+  orderSubmit.addEventListener('click', submitOrder);
+
+  goToPage(0);
+  // ===== СКРЫТИЕ ЗАГОЛОВКА ПРИ ВЗАИМОДЕЙСТВИИ С ЧАТОМ =====
+const chatHeader = document.querySelector('.chat-header-section');
+const widgetIframe = document.querySelector('.widget-wrapper iframe');
+let headerHidden = false;
+
+function hideChatHeader() {
+  if (!headerHidden && chatHeader) {
+    chatHeader.classList.add('hidden');
+    headerHidden = true;
+  }
+}
+
+// Слушаем сообщения от iframe (клик, фокус, отправка)
+window.addEventListener('message', (event) => {
+  // Если виджет отправил событие о взаимодействии
+  if (event.data && event.data.type === 'widget_interaction') {
+    hideChatHeader();
+  }
+});
+
+// Также скрываем при клике на сам iframe (если не сработает postMessage)
+document.addEventListener('click', (e) => {
+  if (widgetIframe && widgetIframe.contains(e.target)) {
+    hideChatHeader();
+  }
+});
+
+// Скрываем при фокусе на поле ввода (через postMessage из виджета)
+// В виджет добавим отправку события
+</script>
+</body>
+</html>

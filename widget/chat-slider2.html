@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ИТРОНИК – чат-слайдер</title>
+
+  <!-- Подключаем marked.js для парсинга Markdown (как в chat-embed) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    /* ===== ОБЩИЕ СТИЛИ (как в старом слайдере, но адаптированы) ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0033;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .chat-widget {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, #0a0033 0%, #120a40 50%, #0d0528 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ===== ШАПКА С АГЕНТОМ ===== */
+    .agent-header {
+      flex-shrink: 0;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .agent-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--agent-primary, #ff00c8), var(--agent-secondary, #ff6b9d));
+      flex-shrink: 0;
+      position: relative;
+    }
+    .agent-avatar::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 10px;
+      height: 10px;
+      background: #4ade80;
+      border-radius: 50%;
+      border: 2px solid #0a0033;
+    }
+
+    .agent-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .agent-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .agent-status {
+      font-size: 11px;
+      color: #4ade80;
+    }
+
+    .agent-nav {
+      display: flex;
+      gap: 4px;
+    }
+    .agent-nav button {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      font-size: 12px;
+      transition: 0.2s;
+    }
+    .agent-nav button:hover:not(:disabled) {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--agent-primary, #ff00c8);
+      color: white;
+    }
+    .agent-nav button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* ===== ОБЛАСТЬ СООБЩЕНИЙ ===== */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+    .messages-area::-webkit-scrollbar { width: 4px; }
+    .messages-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    .message-row {
+      display: flex;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .message-row.user { justify-content: flex-end; }
+    .message-row.bot { justify-content: flex-start; padding-left: 44px; }
+
+    .message-bubble {
+      max-width: 85%;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      position: relative;
+    }
+    .message-row.user .message-bubble {
+      background: linear-gradient(135deg, #ff00c8, #ff6b9d);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message-row.bot .message-bubble {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: white;
+      border-bottom-left-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+    .message-row.bot .message-bubble::before {
+      content: attr(data-avatar);
+      position: absolute;
+      left: -38px;
+      top: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--agent-primary, #ff00c8), var(--agent-secondary, #ff6b9d));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* Стили для Markdown (как в chat-embed) */
+    .message-bubble h1, .message-bubble h2, .message-bubble h3 {
+      margin: 10px 0 6px;
+      font-weight: 600;
+    }
+    .message-bubble h1 { font-size: 18px; }
+    .message-bubble h2 { font-size: 16px; }
+    .message-bubble h3 { font-size: 14px; }
+    .message-bubble p { margin: 6px 0; }
+    .message-bubble ul, .message-bubble ol { margin: 6px 0; padding-left: 20px; }
+    .message-bubble li { margin: 3px 0; }
+    .message-bubble strong { font-weight: 600; }
+    .message-bubble em { font-style: italic; }
+    .message-bubble code {
+      background: rgba(0,0,0,0.25);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .message-bubble pre {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+    .message-bubble pre code { background: none; padding: 0; }
+    .message-bubble a { color: #21d4fd; text-decoration: underline; }
+    .message-bubble blockquote {
+      border-left: 3px solid var(--agent-primary, #ff00c8);
+      padding-left: 12px;
+      opacity: 0.8;
+      margin: 8px 0;
+    }
+    .message-row.user .message-bubble a { color: white; }
+
+    .typing-indicator {
+      display: flex;
+      gap: 5px;
+      padding: 4px 0;
+    }
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+      animation: bounce 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* ===== INLINE КЛАВИАТУРА (как в старом слайдере) ===== */
+    .inline-keyboard {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      animation: slideIn 0.3s ease;
+    }
+    .keyboard-row {
+      display: flex;
+      gap: 8px;
+    }
+    .keyboard-btn {
+      flex: 1;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: white;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.2s;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .keyboard-btn:hover {
+      background: rgba(255,255,255,0.14);
+      border-color: var(--agent-primary, #ff00c8);
+      transform: translateY(-1px);
+    }
+    .keyboard-btn:active { transform: scale(0.97); }
+    .keyboard-btn-icon { font-size: 16px; }
+    .keyboard-btn-text { overflow: hidden; text-overflow: ellipsis; }
+
+    .custom-question-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: rgba(255,255,255,0.7);
+      font-size: 13.5px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .custom-question-btn:hover {
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+      border-style: solid;
+      border-color: var(--agent-primary, #ff00c8);
+      color: white;
+    }
+
+    /* ===== ВВОД СООБЩЕНИЯ ===== */
+    .input-area {
+      flex-shrink: 0;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .input-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .input-wrapper input {
+      flex: 1;
+      padding: 12px 18px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      outline: none;
+      font-size: 14.5px;
+      color: white;
+      font-family: inherit;
+      transition: 0.2s;
+      min-height: 48px;
+    }
+    .input-wrapper input:focus {
+      border-color: var(--agent-primary, #ff00c8);
+      background: rgba(255,255,255,0.12);
+    }
+    .input-wrapper input::placeholder {
+      color: rgba(255,255,255,0.4);
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, var(--agent-primary, #ff00c8), var(--agent-secondary, #ff6b9d));
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: 0.25s;
+      box-shadow: 0 4px 15px rgba(255,0,200,0.3);
+    }
+    .send-btn:hover:not(:disabled) {
+      transform: scale(1.06);
+      box-shadow: 0 6px 22px rgba(255,0,200,0.45);
+    }
+    .send-btn:active:not(:disabled) { transform: scale(0.95); }
+    .send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .send-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .message-bubble { font-size: 13.5px; }
+      .keyboard-btn { font-size: 12px; padding: 8px 10px; }
+      .input-wrapper input { font-size: 14px; padding: 10px 14px; }
+      .send-btn { width: 44px; height: 44px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="chat-widget" id="chatWidget">
+
+  <!-- ШАПКА -->
+  <div class="agent-header" id="agentHeader">
+    <div class="agent-avatar" id="agentAvatar">🇺🇸</div>
+    <div class="agent-info">
+      <div class="agent-name" id="agentName">Дональд Трамп</div>
+      <div class="agent-status">● онлайн</div>
+    </div>
+    <div class="agent-nav">
+      <button id="prevAgent" title="Предыдущий">❮</button>
+      <button id="nextAgent" title="Следующий">❯</button>
+    </div>
+  </div>
+
+  <!-- СООБЩЕНИЯ -->
+  <div class="messages-area" id="messagesArea">
+    <!-- Сюда будут добавляться сообщения -->
+  </div>
+
+  <!-- ВВОД -->
+  <div class="input-area">
+    <div class="input-wrapper">
+      <input type="text" id="messageInput" placeholder="Задайте вопрос..." maxlength="500" />
+      <button class="send-btn" id="sendBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ====================================================================
+  // 1. ДАННЫЕ АГЕНТОВ (только для отображения, FAQ не используются)
+  //    Ответы берутся из API, но мы добавим fallback на случай ошибки
+  // ====================================================================
+  const AGENTS = [
+    {
+      id: 'trumpagent_id=agent_cAg5T0OgoYgl9L07mbbpE',
+      name: 'Дональд Трамп',
+      title: '45-й президент США • Бизнес-магнат',
+      avatar: '🇺🇸',
+      primaryColor: '#ff00c8',
+      secondaryColor: '#ff6b9d',
+      // FAQ для inline-клавиатуры (отправляют вопрос в API)
+      faq: [
+        { icon: '🤝', text: 'Переговоры', question: 'Как вести переговоры?' },
+        { icon: '💰', text: 'Миллиардер', question: 'Как заработать первый миллион?' },
+        { icon: '🎯', text: 'Победить конкурентов', question: 'Как победить конкурентов?' },
+        { icon: '🏛️', text: 'Лидерство', question: 'Советы по лидерству' }
+      ]
+    },
+    {
+      id: 'zakharyev',
+      name: 'Дмитрий Захарьев',
+      title: 'IT-эксперт • Основатель ИТРОНИК',
+      avatar: '🧠',
+      primaryColor: '#21d4fd',
+      secondaryColor: '#6366f1',
+      faq: [
+        { icon: '🤖', text: 'Что такое цифровой двойник?', question: 'Что такое цифровой двойник?' },
+        { icon: '⚙️', text: 'Создание Итроника', question: 'Как создать своего Итроника?' },
+        { icon: '💼', text: 'Заработок с Итроником', question: 'Сколько можно заработать?' },
+        { icon: '🔒', text: 'Безопасность данных', question: 'Безопасно ли передавать данные?' }
+      ]
+    }
+  ];
+
+  // ====================================================================
+  // 2. КЛАСС ЧАТА (ПОЛНОСТЬЮ КОПИРУЕТ ЛОГИКУ ИЗ chat-embed.html)
+  //    Добавлены только переключение агентов и inline-клавиатура
+  // ====================================================================
+  class ItronikSliderChat {
+    constructor() {
+      this.currentAgentIndex = 0;
+      this.agent = AGENTS[0];
+      this.messages = [];
+      this.conversationId = null;
+      this.sessionId = this.getOrCreateSessionId();
+      this.isProcessing = false;
+      this.lastMessageId = 0;
+      this.pollInterval = null;
+      this.historyLoaded = false;
+
+      // DOM
+      this.messagesArea = document.getElementById('messagesArea');
+      this.messageInput = document.getElementById('messageInput');
+      this.sendBtn = document.getElementById('sendBtn');
+      this.agentNameEl = document.getElementById('agentName');
+      this.agentAvatarEl = document.getElementById('agentAvatar');
+      this.prevBtn = document.getElementById('prevAgent');
+      this.nextBtn = document.getElementById('nextAgent');
+
+      // Настройка marked (как в chat-embed)
+      if (typeof marked !== 'undefined') {
+        marked.setOptions({ breaks: true, gfm: true });
+      }
+
+      // События
+      this.sendBtn.addEventListener('click', () => this.sendMessage());
+      this.messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.sendMessage();
+        }
+      });
+      this.prevBtn.addEventListener('click', () => this.switchAgent(-1));
+      this.nextBtn.addEventListener('click', () => this.switchAgent(1));
+
+      // Запуск с первым агентом
+      this.applyAgent(0);
+    }
+
+    // === Управление сессией (копия из chat-embed) ===
+    getOrCreateSessionId() {
+      let sid = localStorage.getItem('itronik_session_slider');
+      if (!sid) {
+        sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('itronik_session_slider', sid);
+      }
+      return sid;
+    }
+
+    // === Переключение агента ===
+    switchAgent(delta) {
+      const newIndex = this.currentAgentIndex + delta;
+      if (newIndex < 0 || newIndex >= AGENTS.length) return;
+      this.applyAgent(newIndex);
+    }
+
+    applyAgent(index) {
+      this.currentAgentIndex = index;
+      this.agent = AGENTS[index];
+
+      // Обновляем цвета
+      document.documentElement.style.setProperty('--agent-primary', this.agent.primaryColor);
+      document.documentElement.style.setProperty('--agent-secondary', this.agent.secondaryColor);
+
+      // Обновляем заголовок
+      this.agentNameEl.textContent = this.agent.name;
+      this.agentAvatarEl.textContent = this.agent.avatar;
+
+      // Кнопки навигации
+      this.prevBtn.disabled = index === 0;
+      this.nextBtn.disabled = index === AGENTS.length - 1;
+
+      // Сброс чата (как в chat-embed при новом агенте)
+      this.messages = [];
+      this.conversationId = null;
+      this.lastMessageId = 0;
+      this.historyLoaded = false;
+      this.messagesArea.innerHTML = '';
+
+      // Загружаем историю (как в chat-embed)
+      this.loadHistory().then(() => {
+        if (!this.historyLoaded) {
+          // Если истории нет – показываем приветствие
+          setTimeout(() => {
+            this.addMessage('assistant', `Здравствуйте! Я ${this.agent.name}. Чем могу помочь?`, false, true);
+            this.showInlineKeyboard();
+          }, 300);
+        } else {
+          // Если история есть – клавиатуру показываем после загрузки
+          setTimeout(() => this.showInlineKeyboard(), 500);
+        }
+      });
+
+      // Перезапуск polling
+      this.stopPolling();
+      this.startPolling();
+    }
+
+    // === Загрузка истории (точная копия из chat-embed) ===
+    async loadHistory() {
+      try {
+        const response = await fetch(`/api.php?action=widget_history&session_id=${this.sessionId}&agent_id=${this.agent.id}`);
+        const data = await response.json();
+
+        if (data.conversation_id) {
+          this.conversationId = data.conversation_id;
+        }
+
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach(msg => {
+            this.addMessage(msg.role, msg.content, false, true);
+            if (msg.id > this.lastMessageId) {
+              this.lastMessageId = msg.id;
+            }
+          });
+          this.historyLoaded = true;
+        }
+      } catch (error) {
+        console.error('Failed to load history:', error);
+        // Не показываем ошибку пользователю, просто загружаем приветствие
+      }
+    }
+
+    // === Polling (копия из chat-embed) ===
+    startPolling() {
+      if (this.pollInterval) return;
+      this.pollInterval = setInterval(() => this.checkNewMessages(), 3000);
+    }
+
+    stopPolling() {
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
+      }
+    }
+
+    async checkNewMessages() {
+      if (this.isProcessing) return;
+
+      try {
+        const response = await fetch(
+          `/api.php?action=widget_poll&session_id=${this.sessionId}&agent_id=${this.agent.id}&last_message_id=${this.lastMessageId}`
+        );
+        const data = await response.json();
+
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach(msg => {
+            if (msg.role === 'assistant') {
+              this.addMessage('assistant', msg.content, false, true);
+            }
+            if (msg.id > this.lastMessageId) {
+              this.lastMessageId = msg.id;
+            }
+          });
+        }
+      } catch (error) {
+        // тихо игнорируем ошибки polling
+      }
+    }
+
+    // === Добавление сообщения (копия из chat-embed) ===
+    addMessage(role, content, isTyping = false, skipPush = false) {
+      const row = document.createElement('div');
+      row.className = `message-row ${role === 'user' ? 'user' : 'bot'}`;
+
+      if (isTyping) {
+        row.id = 'typing-indicator';
+        row.innerHTML = `
+          <div class="message-bubble" data-avatar="${this.agent.avatar}">
+            <div class="typing-indicator"><span></span><span></span><span></span></div>
+          </div>
+        `;
+      } else {
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.setAttribute('data-avatar', this.agent.avatar);
+
+        if (role === 'assistant') {
+          // Парсим Markdown (как в chat-embed)
+          const rawHtml = marked.parse(content);
+          bubble.innerHTML = rawHtml;
+        } else {
+          bubble.textContent = content;
+        }
+
+        row.appendChild(bubble);
+
+        if (!skipPush) {
+          this.messages.push({ role, content });
+        }
+      }
+
+      this.messagesArea.appendChild(row);
+      this.scrollToBottom();
+    }
+
+    removeTypingIndicator() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
+
+    scrollToBottom() {
+      this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+    }
+
+    // === Отправка сообщения (точная копия из chat-embed) ===
+    async sendMessage() {
+      const message = this.messageInput.value.trim();
+      if (!message || this.isProcessing) return;
+
+      this.isProcessing = true;
+      this.sendBtn.disabled = true;
+
+      // Убираем inline-клавиатуру
+      this.removeInlineKeyboard();
+
+      // Добавляем сообщение пользователя
+      this.addMessage('user', message);
+      this.messageInput.value = '';
+
+      // Показываем индикатор набора
+      this.addMessage('assistant', '', true);
+
+      try {
+        const response = await fetch('/api.php?action=widget_send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            message: message,
+            conversation_id: this.conversationId,
+            agent_id: this.agent.id,
+            agent_name: this.agent.name
+          })
+        });
+
+        this.removeTypingIndicator();
+
+        if (!response.ok) {
+          throw new Error('Ошибка сервера');
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        const assistantMessage = data.response || 'Извините, не смог обработать ваш запрос.';
+        this.addMessage('assistant', assistantMessage);
+
+        if (data.conversation_id) {
+          this.conversationId = data.conversation_id;
+        }
+        if (data.message_id) {
+          this.lastMessageId = data.message_id;
+        }
+
+      } catch (error) {
+        this.removeTypingIndicator();
+        console.error('Chat error:', error);
+        this.addMessage('assistant', 'Извините, произошла ошибка. Попробуйте ещё раз.');
+      } finally {
+        this.isProcessing = false;
+        this.sendBtn.disabled = false;
+        this.messageInput.focus();
+        // После ответа показываем клавиатуру снова
+        setTimeout(() => this.showInlineKeyboard(), 500);
+      }
+    }
+
+    // === Inline-клавиатура (для быстрых вопросов) ===
+    showInlineKeyboard() {
+      this.removeInlineKeyboard();
+
+      const container = document.createElement('div');
+      container.className = 'inline-keyboard';
+      container.id = 'inlineKeyboard';
+
+      const faq = this.agent.faq;
+      let html = '';
+      for (let i = 0; i < faq.length; i += 2) {
+        html += '<div class="keyboard-row">';
+        html += this.buildFaqButton(faq[i]);
+        if (faq[i + 1]) {
+          html += this.buildFaqButton(faq[i + 1]);
+        } else {
+          html += '<div style="flex:1;"></div>';
+        }
+        html += '</div>';
+      }
+
+      html += `
+        <div class="custom-question-btn" onclick="chatInstance.focusInput()">
+          <span>✍️</span> Задать свой вопрос <span style="margin-left:auto;opacity:0.5;">→</span>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      this.messagesArea.appendChild(container);
+      this.scrollToBottom();
+    }
+
+    buildFaqButton(item) {
+      return `
+        <button class="keyboard-btn" onclick="chatInstance.handleFaqClick('${item.question.replace(/'/g, "\\'")}')">
+          <span class="keyboard-btn-icon">${item.icon}</span>
+          <span class="keyboard-btn-text">${item.text}</span>
+        </button>
+      `;
+    }
+
+    removeInlineKeyboard() {
+      const el = document.getElementById('inlineKeyboard');
+      if (el) el.remove();
+    }
+
+    focusInput() {
+      this.messageInput.focus();
+    }
+
+    handleFaqClick(question) {
+      this.removeInlineKeyboard();
+      // Отправляем вопрос как пользовательское сообщение
+      this.messageInput.value = question;
+      this.sendMessage();
+    }
+  }
+
+  // ====================================================================
+  // 3. ЗАПУСК
+  // ====================================================================
+  let chatInstance;
+  document.addEventListener('DOMContentLoaded', () => {
+    chatInstance = new ItronikSliderChat();
+    // Сообщаем родительскому фрейму о готовности
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'itronik_widget_ready' }, '*');
+    }
+  });
+</script>
+</body>
+</html>

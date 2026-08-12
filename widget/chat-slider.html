@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- DOMPurify -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    
+    <style>
+        :root {
+            --agent-primary: #ff00c8;
+            --agent-secondary: #ff6b9d;
+            --bg-dark: #0a0033;
+            --bg-card: rgba(255,255,255,0.06);
+            --bg-input: rgba(255,255,255,0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.65);
+            --border-color: rgba(255,255,255,0.1);
+            --msg-user-bg: linear-gradient(135deg, var(--agent-primary), var(--agent-secondary));
+            --msg-bot-bg: rgba(255,255,255,0.08);
+            --shadow-glow: 0 0 30px rgba(102, 126, 234, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        /* ==================== MAIN CONTAINER ==================== */
+        .chat-widget {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #0a0033 0%, #120a40 50%, #0d0528 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-widget::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(255, 0, 200, 0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(33, 212, 253, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* ==================== AGENT HEADER ==================== */
+        .agent-header {
+            flex-shrink: 0;
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .agent-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+
+        .agent-selector:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .agent-avatar-small {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            position: relative;
+            background: linear-gradient(135deg, var(--agent-primary), var(--agent-secondary));
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .agent-avatar-small::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            border: 2px solid var(--bg-dark);
+        }
+
+        .agent-info-mini {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name-mini {
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-status-mini {
+            font-size: 11px;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .agent-nav-arrows {
+            display: flex;
+            gap: 4px;
+        }
+
+        .agent-arrow-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .agent-arrow-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            border-color: var(--agent-primary);
+        }
+
+        .agent-arrow-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        /* Agent dropdown for mobile */
+        .agent-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 16px;
+            right: 16px;
+            background: rgba(15, 5, 45, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 8px;
+            z-index: 100;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .agent-dropdown.open { display: block; }
+
+        .agent-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .agent-dropdown-item:hover,
+        .agent-dropdown-item.active {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .agent-dropdown-item.active {
+            background: rgba(255,255,255,0.12);
+        }
+
+        .agent-dropdown-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .agent-dropdown-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .agent-dropdown-info p {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* ==================== CHAT MESSAGES AREA ==================== */
+        .chat-messages-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages-area::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .chat-messages-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages-area::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+        }
+
+        /* Welcome message */
+        .welcome-message {
+            text-align: center;
+            padding: 24px 16px;
+        }
+
+        .welcome-avatar-large {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            background: linear-gradient(135deg, var(--agent-primary), var(--agent-secondary));
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: floatAvatar 3s ease-in-out infinite;
+        }
+
+        @keyframes floatAvatar {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .welcome-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .welcome-subtext {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Message bubble */
+        .message-row {
+            display: flex;
+            animation: msgSlideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 88%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14.5px;
+            line-height: 1.55;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        .message-row.user .message-bubble {
+            background: var(--msg-user-bg);
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 4px 15px rgba(255, 0, 200, 0.2);
+        }
+
+        .message-row.bot .message-bubble {
+            background: var(--msg-bot-bg);
+            color: var(--text-primary);
+            border-bottom-left-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Bot avatar in message */
+        .message-row.bot .message-bubble::before {
+            content: attr(data-avatar);
+            position: absolute;
+            left: -38px;
+            top: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--agent-primary), var(--agent-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .message-row.bot {
+            padding-left: 44px;
+        }
+
+        /* Markdown styles inside bubble */
+        .message-bubble p { margin: 6px 0; }
+        .message-bubble p:first-child { margin-top: 0; }
+        .message-bubble p:last-child { margin-bottom: 0; }
+        
+        .message-bubble strong { 
+            color: var(--agent-primary); 
+            font-weight: 600; 
+        }
+        
+        .message-bubble em { 
+            font-style: italic; 
+            opacity: 0.9; 
+        }
+        
+        .message-bubble code {
+            background: rgba(0,0,0,0.25);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+        }
+        
+        .message-bubble pre {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .message-bubble ul, 
+        .message-bubble ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        .message-bubble li {
+            margin: 4px 0;
+        }
+        
+        .message-bubble blockquote {
+            border-left: 3px solid var(--agent-primary);
+            padding-left: 12px;
+            margin: 10px 0;
+            opacity: 0.85;
+        }
+        
+        .message-bubble a {
+            color: var(--agent-primary);
+            text-decoration: underline;
+        }
+
+        .message-row.user .message-bubble a {
+            color: white;
+        }
+
+        .message-bubble h1,
+        .message-bubble h2,
+        .message-bubble h3 {
+            margin: 14px 0 8px;
+            font-weight: 700;
+        }
+        .message-bubble h1 { font-size: 18px; }
+        .message-bubble h2 { font-size: 16px; }
+        .message-bubble h3 { font-size: 15px; }
+
+        /* Typing cursor effect */
+        .typing-cursor::after {
+            content: '▊';
+            animation: blink 0.7s infinite;
+            color: var(--agent-primary);
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* ==================== INLINE KEYBOARD ==================== */
+        .inline-keyboard {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            animation: keyboardSlideUp 0.3s ease-out;
+        }
+
+        @keyframes keyboardSlideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .keyboard-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .keyboard-btn:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: var(--agent-primary);
+            transform: translateY(-1px);
+        }
+
+        .keyboard-btn:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .keyboard-btn-icon {
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .keyboard-btn-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Custom question button */
+        .custom-question-keyboard {
+            margin-top: 4px;
+        }
+
+        .custom-question-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+            border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .custom-question-btn:hover {
+            background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+            border-style: solid;
+            border-color: var(--agent-primary);
+            color: var(--text-primary);
+        }
+
+        /* ==================== TYPING INDICATOR ==================== */
+        .typing-indicator-row {
+            display: flex;
+            padding-left: 44px;
+            animation: msgSlideIn 0.35s ease-out;
+        }
+
+        .typing-indicator-bubble {
+            background: var(--msg-bot-bg);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { 
+                transform: translateY(0); 
+                opacity: 0.4; 
+            }
+            30% { 
+                transform: translateY(-8px); 
+                opacity: 1; 
+            }
+        }
+
+        /* Thinking indicator (more sophisticated) */
+        .thinking-indicator-row {
+            display: flex;
+            padding-left: 44px;
+            animation: msgSlideIn 0.35s ease-out;
+        }
+
+        .thinking-indicator-bubble {
+            background: var(--msg-bot-bg);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .thinking-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.15);
+            border-top-color: var(--agent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .thinking-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .thinking-dots span {
+            animation: thinkingDotPulse 1.4s infinite;
+        }
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes thinkingDotPulse {
+            0%, 80%, 100% { opacity: 0.3; }
+            40% { opacity: 1; }
+        }
+
+        /* ==================== INPUT AREA ==================== */
+        .input-area {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-field-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 13px 18px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            outline: none;
+            font-size: 14.5px;
+            font-family: inherit;
+            color: var(--text-primary);
+            resize: none;
+            min-height: 48px;
+            max-height: 120px;
+            line-height: 1.4;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--agent-primary);
+            background: rgba(255,255,255,0.1);
+            box-shadow: 0 0 0 3px rgba(255, 0, 200, 0.1);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--agent-primary), var(--agent-secondary));
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(255, 0, 200, 0.3);
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.06);
+            box-shadow: 0 6px 22px rgba(255, 0, 200, 0.45);
+        }
+
+        .send-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Input area collapsed state */
+        .input-area.collapsed {
+            display: none;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 480px) {
+            .message-bubble {
+                max-width: 92%;
+                font-size: 14px;
+            }
+
+            .keyboard-btn {
+                padding: 9px 10px;
+                font-size: 12.5px;
+            }
+
+            .chat-input {
+                min-height: 44px;
+                padding: 11px 16px;
+            }
+
+            .send-btn {
+                width: 44px;
+                height: 44px;
+            }
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-widget" id="chatWidget">
+    
+    <!-- ==================== AGENT HEADER ==================== -->
+    <div class="agent-header">
+        <div class="agent-selector" onclick="widget.toggleAgentDropdown()">
+            <div class="agent-avatar-small" id="headerAvatar">🇺🇸</div>
+            <div class="agent-info-mini">
+                <div class="agent-name-mini" id="headerName">Дональд Трамп</div>
+                <div class="agent-status-mini">● онлайн</div>
+            </div>
+            <div class="agent-nav-arrows">
+                <button class="agent-arrow-btn" id="prevAgentBtn" onclick="event.stopPropagation(); widget.prevAgent()">❮</button>
+                <button class="agent-arrow-btn" id="nextAgentBtn" onclick="event.stopPropagation(); widget.nextAgent()">❯</button>
+            </div>
+        </div>
+
+        <!-- Dropdown -->
+        <div class="agent-dropdown" id="agentDropdown"></div>
+    </div>
+
+    <!-- ==================== CHAT MESSAGES ==================== -->
+    <div class="chat-messages-area" id="messagesArea">
+        <!-- Messages will be rendered here -->
+    </div>
+
+    <!-- ==================== INPUT AREA ==================== -->
+    <div class="input-area" id="inputArea">
+        <div class="input-wrapper">
+            <div class="input-field-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="messageInput" 
+                    placeholder="Задайте ваш вопрос..."
+                    rows="1"
+                    maxlength="1000"
+                ></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="widget.sendMessage()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ==================== AGENTS DATA ====================
+const AGENTS = [
+    {
+        id: 'trump',
+        name: 'Дональд Трамп',
+        title: '45-й президент США • Бизнес-магнат',
+        avatar: '🇺🇸',
+        primaryColor: '#ff00c8',
+        secondaryColor: '#ff6b9d',
+        welcomeMessage: 'Привет! Я Дональд Трамп. 🇺🇸\n\nВыбери тему или задай свой вопрос — я отвечу так, как ответил бы в реальной жизни.',
+        faq: [
+            {
+                icon: '🤝',
+                text: 'Переговоры',
+                question: 'Как вести переговоры?',
+                answer: `**Золотые правила переговоров Трампа:**\n\n1️⃣ **Начинай с позиции силы** — никогда не показывай, что тебе нужно сделка больше, чем им.\n\n2️⃣ **Будь готов уйти** — лучшая позиция в переговорах — это когда ты готов сказать "нет" и уйти.\n\n3️⃣ **Используй якоря** — Называй экстремальную цену первым. Остальное будет казаться выгодным.\n\n4️⃣ **Молчание — это сила** — После того как ты назвал условия, замолчи. Пусть другой человек заговорит первым.\n\n5️⃣ **Win-Win — для слабаков** — В настоящей сделке ты должен выиграть БОЛЬШЕ.\n\n> *"В бизнесе, как и в жизни, побеждает тот, кто не боится проиграть."*`
+            },
+            {
+                icon: '💰',
+                text: 'Миллиардер',
+                question: 'Как заработать первый миллион?',
+                answer: `**Путь к миллиону по Трампу:**\n\n📍 **Найди свою нишу**\nНе пытайся быть всем для всех. Стань лучшим в одном.\n\n💡 **Бренд — это всё**\nЛюди покупают не продукт, они покупают ТЕБЯ. Создай личность, которую невозможно забыть.\n\n📢 **Маркетинг агрессивный**\nТихие не выигрывают. Будь громким. Будь везде. Повторяй своё имя до тошноты.\n\n🏗️ **Недвижимость — король активов**\nЗемля — единственное, что они больше не производят. Инвестируй с умом.\n\n⚡ **Действуй быстро**\nПока ты думаешь — кто-то уже купил этот объект. Анализируй быстро, решай мгновенно.\n\n> *"Я люблю долг. Я люблю играть чужими деньгами."*`
+            },
+            {
+                icon: '🎯',
+                text: 'Победить конкурентов',
+                question: 'Как победить конкурентов?',
+                answer: `**Стратегия уничтожения конкуренции:**\n\n🔥 **Атакуй первым**\nНе жди, пока они придут за тобой. Уничтожь их на их территории.\n\n📰 **Контролируй нарратив**\nКто контролирует медиа — контролирует реальность. Сделай так, чтобы все говорили о тебе.\n\n⚖️ **Используй закон**\nЛучшие юристы — это инвестиция, а не расход. Шагай по грани, но никогда не пересекай её без плана отступления.\n\n🎭 **Психологическое давление**\nЗаставь их думать, что ты безумен. Безумные люди непредсказуемы, а непредсказуемость пугает.\n\n💣 **Никакой жалости**\nБизнес — это война. На войне нет второго места.\n\n> *"Когда кто-то ударяет меня — я ударяю обратно в 10 раз сильнее."*`
+            },
+            {
+                icon: '🏛️',
+                text: 'Лидерство',
+                question: 'Советы по лидерству',
+                answer: `**Лидерство по-крупному:**\n\n👑 **Будь решительным**\nЛюди следуют за теми, кто знает, куда идти. Сомнение убивает авторитет.\n\n🔄 **Меняй команду**\nЕсли кто-то не справляется — замени. Немедленно. Sentimentality is for losers.\n\n📺 **Управляй восприятием**\nРеальность не важна. Важно то, что люди THINK является реальностью.\n\n🎯 **Делегируй, но контролируй**\nДоверяй, но проверяешь. Каждый должен знать: ты следишь.\n\n💪 **Показывай силу**\nСлабость привлекает атаки. Сила привлекает уважение.\n\n> *"Я нанимаю лучших людей, а затем позволяю им делать свою работу."*`
+            }
+        ]
+    },
+    {
+        id: 'zakharyev',
+        name: 'Дмитрий Захарьев',
+        title: 'IT-эксперт • Основатель ИТРОНИК',
+        avatar: '🧠',
+        primaryColor: '#21d4fd',
+        secondaryColor: '#6366f1',
+        welcomeMessage: 'Здравствуйте! Я Дмитрий Захарьев. 🧠\n\nМогу рассказать о цифровых двойниках, AI или помочь создать вашего Итроника.',
+        faq: [
+            {
+                icon: '🤖',
+                text: 'Что такое цифровой двойник?',
+                question: 'Что такое цифровой двойник?',
+                answer: `**Цифровой двойник (Digital Twin) — это:**\n\n🧬 **Не чат-бот** — это клон твоего мышления, обученный на ТВОИХ данных.\n\n📚 **Источники обучения:**\n• Записи твоих консультаций\n• Твои статьи, книги, посты\n• Реальные кейсы и решения\n• Твои письма и переписки\n\n🎯 **Результат:**\nАгент, который отвечает ТАК ЖЕ, как ответил бы ты. С твоим стилем, юмором, экспертизой.\n\n💰 **Экономика:**\n• Один ты = 8 часов/день\n• Ты + Итроник = 24 часа/день\n• Итроник не устаёт, не болеет, не просит отпуск\n\n> *"Итроник — это не инструмент. Это второй ты."*`
+            },
+            {
+                icon: '⚙️',
+                text: 'Создание Итроника',
+                question: 'Как создать своего Итроника?',
+                answer: `**Процесс создания цифрового двойника:**\n\n**Шаг 1: Сбор данных** 🔍\n• Записываем 5-10 консультаций\n• Собираем все текстовые материалы\n• Анализируем стиль общения\n\n**Шаг 2: Обучение модели** 🧠\n• Загружаем данные в систему\n• Настраиваем под твою нишу\n• Калибруем "голос"\n\n**Шаг 3: Тестирование** 🧪\n• Проверяем на реальных вопросах\n• Корректируем ответы\n• Добавляем исключения\n\n**Шаг 4: Интеграция** 🔗\n• Подключаем к твоим каналам\n• Настраиваем автареспондеры\n• Обучаем команду работать с ним\n\n⏱️ **Сроки:** 2-4 недели от старта до готовности`
+            },
+            {
+                icon: '💼',
+                text: 'Заработок с Итроником',
+                question: 'Сколько можно заработать?',
+                answer: `**Математика масштабирования:**\n\n📊 **До Итроника:**\n• 5 консультаций/день × $200 = $1,000/день\n• 22 дня × $1,000 = $22,000/мес\n• **Годовой доход: ~$264,000**\n\n🚀 **С Итроником:**\n• 50 консультаций/день (45 делает Итроник)\n• Ты проверяешь только сложные кейсы\n• **Рост дохода: 300-500%**\n\n💡 **Дополнительные источники:**\n• Ночные продажи (пока ты спишь)\n• Международные клиенты\n• Масштабирование без найма сотрудников\n\n📈 **ROI наших клиентов:**\n• Средняя окупаемость: 2-3 месяца\n• Рост прибыли: +40% за квартал`
+            },
+            {
+                icon: '🔒',
+                text: 'Безопасность данных',
+                question: 'Безопасно ли передавать данные?',
+                answer: `**Система безопасности ИТРОНИК:**\n\n🔐 **Шифрование данных:**\n• AES-256 для хранения\n• TLS 1.3 для передачи\n• End-to-end для диалогов\n\n🛡️ **Защита интеллектуальной собственности:**\n• Твои данные НЕ используются для обучения других моделей\n• Нет доступа третьих лиц к твоему контенту\n• Права принадлежат только тебе\n\n⚖️ **Юридическая защита:**\n• GDPR compliant\n• NDA с каждым сотрудником\n• Регулярные аудиты безопасности\n\n🎛️ **Твой контроль:**\n• Можно удалить любые данные anytime\n• Можно отключить Итроника одной кнопкой\n• Полный лог всех действий`
+            }
+        ]
+    }
+];
+
+// ==================== WIDGET CLASS ====================
+class ItronikChatWidget {
+    constructor() {
+        this.currentAgentIndex = 0;
+        this.agent = null;
+        this.messages = [];
+        this.isProcessing = false;
+        this.conversationId = null;
+        this.sessionId = this.getSessionId();
+        this.pollInterval = null;
+        this.lastMessageId = 0;
+        this.dropdownOpen = false;
+
+        // DOM refs
+        this.widgetEl = document.getElementById('chatWidget');
+        this.messagesArea = document.getElementById('messagesArea');
+        this.inputArea = document.getElementById('inputArea');
+        this.messageInput = document.getElementById('messageInput');
+        this.sendBtn = document.getElementById('sendBtn');
+
+        this.init();
+    }
+
+    getSessionId() {
+        let sid = localStorage.getItem('itronik_session_v3');
+        if (!sid) {
+            sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('itronik_session_v3', sid);
+        }
+        return sid;
+    }
+
+    init() {
+        // Setup marked
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+        }
+
+        // Set first agent
+        this.setAgent(0);
+
+        // Render dropdown
+        this.renderDropdown();
+
+        // Input events
+        this.messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Auto-resize textarea
+        this.messageInput.addEventListener('input', () => {
+            this.messageInput.style.height = 'auto';
+            this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.agent-header')) {
+                this.closeDropdown();
+            }
+        });
+    }
+
+    // ==================== AGENT MANAGEMENT ====================
+    setAgent(index) {
+        this.currentAgentIndex = index;
+        this.agent = AGENTS[index];
+
+        // Apply colors
+        this.applyAgentColors();
+
+        // Update header
+        document.getElementById('headerAvatar').textContent = this.agent.avatar;
+        document.getElementById('headerName').textContent = this.agent.name;
+
+        // Update nav buttons
+        document.getElementById('prevAgentBtn').disabled = index === 0;
+        document.getElementById('nextAgentBtn').disabled = index === AGENTS.length - 1;
+
+        // Update dropdown active state
+        this.updateDropdownActive();
+
+        // Reset chat
+        this.resetChat();
+    }
+
+    applyAgentColors() {
+        const a = this.agent;
+        document.documentElement.style.setProperty('--agent-primary', a.primaryColor);
+        document.documentElement.style.setProperty('--agent-secondary', a.secondaryColor);
+    }
+
+    prevAgent() {
+        if (this.currentAgentIndex > 0) {
+            this.setAgent(this.currentAgentIndex - 1);
+        }
+    }
+
+    nextAgent() {
+        if (this.currentAgentIndex < AGENTS.length - 1) {
+            this.setAgent(this.currentAgentIndex + 1);
+        }
+    }
+
+    toggleAgentDropdown() {
+        this.dropdownOpen ? this.closeDropdown() : this.openDropdown();
+    }
+
+    openDropdown() {
+        this.dropdownOpen = true;
+        document.getElementById('agentDropdown').classList.add('open');
+    }
+
+    closeDropdown() {
+        this.dropdownOpen = false;
+        document.getElementById('agentDropdown').classList.remove('open');
+    }
+
+    renderDropdown() {
+        const dropdown = document.getElementById('agentDropdown');
+        dropdown.innerHTML = AGENTS.map((a, i) => `
+            <div class="agent-dropdown-item ${i === this.currentAgentIndex ? 'active' : ''}" 
+                 onclick="widget.selectAgentFromDropdown(${i})">
+                <div class="agent-dropdown-avatar" style="background: linear-gradient(135deg, ${a.primaryColor}, ${a.secondaryColor});">
+                    ${a.avatar}
+                </div>
+                <div class="agent-dropdown-info">
+                    <h4>${a.name}</h4>
+                    <p>${a.title}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updateDropdownActive() {
+        document.querySelectorAll('.agent-dropdown-item').forEach((item, i) => {
+            item.classList.toggle('active', i === this.currentAgentIndex);
+        });
+    }
+
+    selectAgentFromDropdown(index) {
+        this.setAgent(index);
+        this.closeDropdown();
+    }
+
+    // ==================== CHAT MANAGEMENT ====================
+    resetChat() {
+        this.messages = [];
+        this.renderWelcomeMessage();
+        this.scrollToBottom();
+    }
+
+    renderWelcomeMessage() {
+        this.messagesArea.innerHTML = `
+            <div class="welcome-message">
+                <div class="welcome-avatar-large">${this.agent.avatar}</div>
+                <div class="welcome-text">${this.agent.name.split(' ')[0]} ${this.agent.name.split(' ')[1] || ''}</div>
+                <div class="welcome-subtext">${this.agent.title}</div>
+            </div>
+        `;
+
+        // Add bot welcome message
+        setTimeout(() => {
+            this.addBotMessage(this.agent.welcomeMessage, () => {
+                this.showInlineKeyboard();
+            });
+        }, 400);
+    }
+
+    showInlineKeyboard() {
+        const keyboardHtml = this.buildKeyboardHTML();
+        const keyboardDiv = document.createElement('div');
+        keyboardDiv.className = 'inline-keyboard';
+        keyboardDiv.id = 'inlineKeyboard';
+        keyboardDiv.innerHTML = keyboardHtml;
+        this.messagesArea.appendChild(keyboardDiv);
+        this.scrollToBottom();
+    }
+
+    buildKeyboardHTML() {
+        const faq = this.agent.faq;
+        let html = '';
+
+        // FAQ buttons in rows of 2
+        for (let i = 0; i < faq.length; i += 2) {
+            html += '<div class="keyboard-row">';
+            html += this.buildFaqButton(faq[i]);
+            if (faq[i + 1]) {
+                html += this.buildFaqButton(faq[i + 1]);
+            } else {
+                html += '<div style="flex:1;"></div>'; // Empty spacer
+            }
+            html += '</div>';
+        }
+
+        // Custom question button
+        html += `
+            <div class="custom-question-keyboard">
+                <button class="custom-question-btn" onclick="widget.showCustomInput()">
+                    <span>✍️</span>
+                    <span>Задать свой вопрос</span>
+                    <span style="margin-left:auto;opacity:0.5;">→</span>
+                </button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    buildFaqButton(faqItem) {
+        return `
+            <button class="keyboard-btn" onclick="widget.handleFaqClick('${faqItem.question.replace(/'/g, "\\'")}')">
+                <span class="keyboard-btn-icon">${faqItem.icon}</span>
+                <span class="keyboard-btn-text">${faqItem.text}</span>
+            </button>
+        `;
+    }
+
+    removeInlineKeyboard() {
+        const kb = document.getElementById('inlineKeyboard');
+        if (kb) kb.remove();
+    }
+
+    showCustomInput() {
+        this.removeInlineKeyboard();
+        this.messageInput.focus();
+        this.messageInput.placeholder = `Вопрос для ${this.agent.name}...`;
+        
+        // Pulse animation on input
+        this.inputArea.style.animation = 'none';
+        this.inputArea.offsetHeight; // Trigger reflow
+        this.inputArea.style.animation = 'pulse-border 0.5s ease';
+    }
+
+    // ==================== MESSAGE HANDLING ====================
+    handleFaqClick(question) {
+        // Remove keyboard
+        this.removeInlineKeyboard();
+
+        // Add user message
+        this.addUserMessage(question);
+
+        // Find the answer
+        const faqItem = this.agent.faq.find(f => f.question === question);
+        
+        if (faqItem) {
+            // Show thinking indicator
+            this.showThinkingIndicator(`Думаю над ответом`);
+
+            // Simulate thinking time
+            const thinkTime = 800 + Math.random() * 1200;
+            
+            setTimeout(() => {
+                this.removeThinkingIndicator();
+                
+                // Type out response with streaming effect
+                this.streamBotMessage(faqItem.answer, () => {
+                    // Show keyboard again after response
+                    setTimeout(() => this.showInlineKeyboard(), 500);
+                });
+            }, thinkTime);
+        }
+    }
+
+    async sendMessage() {
+        const message = this.messageInput.value.trim();
+        if (!message || this.isProcessing) return;
+
+        this.isProcessing = true;
+        this.sendBtn.disabled = true;
+
+        // Remove keyboard if visible
+        this.removeInlineKeyboard();
+
+        // Add user message
+        this.addUserMessage(message);
+        this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
+
+        // Show thinking
+        this.showThinkingIndicator(`${this.agent.name} печатает...`);
+
+        try {
+            // Call real API
+            const response = await fetch('/api.php?action=widget_send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: this.sessionId,
+                    message: message,
+                    conversation_id: this.conversationId,
+                    agent_id: this.agent.id,
+                    agent_name: this.agent.name
+                })
+            });
+
+            this.removeThinkingIndicator();
+
+            if (!response.ok) throw new Error('Server error');
+
+            const data = await response.json();
+
+            if (data.error) throw new Error(data.error);
+
+            // Stream the response
+            this.streamBotMessage(data.response || 'Произошла ошибка.', () => {
+                if (data.conversation_id) this.conversationId = data.conversation_id;
+                if (data.message_id) this.lastMessageId = data.message_id;
+                
+                // Start polling for follow-up messages
+                this.startPolling();
+                
+                // Show keyboard after delay
+                setTimeout(() => this.showInlineKeyboard(), 800);
+            });
+
+        } catch (error) {
+            console.error('API Error:', error);
+            this.removeThinkingIndicator();
+            
+            this.addBotMessage('⚠️ Произошла ошибка соединения. Попробуйте ещё раз.');
+            
+            setTimeout(() => this.showInlineKeyboard(), 500);
+        } finally {
+            this.isProcessing = false;
+            this.sendBtn.disabled = false;
+            this.messageInput.focus();
+        }
+    }
+
+    addUserMessage(text) {
+        const row = document.createElement('div');
+        row.className = 'message-row user';
+        row.innerHTML = `<div class="message-bubble">${this.escapeHtml(text)}</div>`;
+        this.messagesArea.appendChild(row);
+        this.messages.push({ role: 'user', content: text });
+        this.scrollToBottom();
+    }
+
+    addBotMessage(text, callback) {
+        const row = document.createElement('div');
+        row.className = 'message-row bot';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.setAttribute('data-avatar', this.agent.avatar);
+        
+        if (typeof marked !== 'undefined') {
+            bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
+        } else {
+            bubble.textContent = text;
+        }
+        
+        row.appendChild(bubble);
+        this.messagesArea.appendChild(row);
+        this.messages.push({ role: 'bot', content: text });
+        this.scrollToBottom();
+
+        if (callback) callback();
+    }
+
+    streamBotMessage(fullText, callback) {
+        const row = document.createElement('div');
+        row.className = 'message-row bot';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble typing-cursor';
+        bubble.setAttribute('data-avatar', this.agent.avatar);
+        
+        row.appendChild(bubble);
+        this.messagesArea.appendChild(row);
+        this.scrollToBottom();
+
+        // Streaming simulation
+        const words = fullText.split(' ');
+        let currentText = '';
+        let wordIndex = 0;
+
+        const typeWord = () => {
+            if (wordIndex < words.length) {
+                currentText += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
+                
+                if (typeof marked !== 'undefined') {
+                    bubble.innerHTML = DOMPurify.sanitize(marked.parse(currentText));
+                } else {
+                    bubble.textContent = currentText;
+                }
+                
+                wordIndex++;
+                this.scrollToBottom();
+
+                // Variable speed for natural feel
+                const delay = 30 + Math.random() * 50;
+                setTimeout(typeWord, delay);
+            } else {
+                // Done typing
+                bubble.classList.remove('typing-cursor');
+                this.messages.push({ role: 'bot', content: fullText });
+                if (callback) callback();
+            }
+        };
+
+        // Start after small delay
+        setTimeout(typeWord, 100);
+    }
+
+    showThinkingIndicator(text) {
+        const row = document.createElement('div');
+        row.className = 'thinking-indicator-row';
+        row.id = 'thinkingIndicator';
+        row.innerHTML = `
+            <div class="thinking-indicator-bubble">
+                <div class="thinking-spinner"></div>
+                <span class="thinking-text">${text}<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span></span>
+            </div>
+        `;
+        this.messagesArea.appendChild(row);
+        this.scrollToBottom();
+    }
+
+    removeThinkingIndicator() {
+        const el = document.getElementById('thinkingIndicator');
+        if (el) el.remove();
+    }
+
+    showTypingIndicator() {
+        const row = document.createElement('div');
+        row.className = 'typing-indicator-row';
+        row.id = 'typingIndicator';
+        row.innerHTML = `
+            <div class="typing-indicator-bubble">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        `;
+        this.messagesArea.appendChild(row);
+        this.scrollToBottom();
+    }
+
+    removeTypingIndicator() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    scrollToBottom() {
+        requestAnimationFrame(() => {
+            this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ==================== POLLING ====================
+    startPolling() {
+        if (this.pollInterval) return;
+        this.pollInterval = setInterval(() => this.checkNewMessages(), 3000);
+    }
+
+    stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
+    }
+
+    async checkNewMessages() {
+        if (this.isProcessing) return;
+
+        try {
+            const response = await fetch(
+                `/api.php?action=widget_poll&session_id=${this.sessionId}&agent_id=${this.agent.id}&last_message_id=${this.lastMessageId}`
+            );
+            const data = await response.json();
+
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    if (msg.role === 'assistant') {
+                        this.addBotMessage(msg.content);
+                    }
+                    if (msg.id > this.lastMessageId) {
+                        this.lastMessageId = msg.id;
+                    }
+                });
+            }
+        } catch (e) {
+            // Silent fail for polling
+        }
+    }
+}
+
+// ==================== INITIALIZE ====================
+let widget;
+document.addEventListener('DOMContentLoaded', () => {
+    widget = new ItronikChatWidget();
+});
+
+// Notify parent when ready
+if (window.parent !== window) {
+    window.parent.postMessage({ type: 'itronik_widget_ready' }, '*');
+}
+</script>
+
+<style>
+/* Additional inline animation */
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(255, 0, 200, 0.3); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 0, 200, 0); }
+}
+</style>
+
+</body>
+</html>

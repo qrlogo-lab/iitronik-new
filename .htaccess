@@ -1,0 +1,45 @@
+# ============= БАЗОВЫЕ НАСТРОЙКИ =============
+Options -Indexes
+ServerSignature Off
+
+# ============= ЗАЩИТА ФАЙЛОВ =============
+<FilesMatch "\.(db|log|json|env|htaccess|htpasswd|ini|conf|bak|sql)$">
+    Require all denied
+</FilesMatch>
+
+<Files .*>
+    Require all denied
+</Files>
+
+# ============= ЗАЩИТА ОТ АТАК =============
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Блокировка SQL-инъекций
+    RewriteCond %{QUERY_STRING} (union|select|insert|drop|update|delete|alter|create|exec) [NC]
+    RewriteRule .* - [F,L]
+    
+    # Блокировка опасных символов
+    RewriteCond %{QUERY_STRING} (<|%3C|>|%3E|'|%27|%22) [NC]
+    RewriteRule .* - [F,L]
+    
+    # Блокировка включения файлов
+    RewriteCond %{QUERY_STRING} (\.\./|\.\.\\|://) [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ============= ЗАГОЛОВКИ БЕЗОПАСНОСТИ =============
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header unset Server
+    Header unset X-Powered-By
+</IfModule>
+
+# ============= ОГРАНИЧЕНИЯ =============
+LimitRequestBody 5242880
+
+<IfModule mod_php.c>
+    php_flag expose_php Off
+</IfModule>

@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Диагностика бизнеса — ИИ-маркетолог</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f5f7fa;
+            color: #1a1a1a;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 820px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 40px 30px;
+        }
+
+        .logo-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0a2c4b;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+
+        /* Приветствие */
+        .welcome-box {
+            background: #f0f4ff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 4px solid #0a2c4b;
+        }
+        .welcome-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .welcome-box li {
+            padding: 4px 0;
+            font-weight: 500;
+        }
+        .welcome-box li::before {
+            content: "✓ ";
+            color: #0a2c4b;
+            font-weight: 700;
+        }
+
+        .btn {
+            background: #0a2c4b;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 17px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 0.3px;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #143b5e;
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1a1a1a;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .question-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0a2c4b;
+        }
+        .question-progress {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .question-text {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #2d3748;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .options label {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #f7fafc;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: 0.15s;
+            font-weight: 400;
+            font-size: 16px;
+        }
+
+        .options label:hover {
+            background: #edf2f7;
+            border-color: #b0c4d9;
+        }
+
+        .options input[type="radio"] {
+            margin-top: 4px;
+            min-width: 18px;
+            height: 18px;
+            accent-color: #0a2c4b;
+        }
+
+        .options .letter {
+            font-weight: 700;
+            color: #0a2c4b;
+            margin-right: 2px;
+        }
+
+        .custom-answer {
+            margin-top: 10px;
+        }
+        .custom-answer textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #cbd5e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+            transition: 0.2s;
+        }
+        .custom-answer textarea:focus {
+            outline: none;
+            border-color: #0a2c4b;
+            box-shadow: 0 0 0 3px rgba(10, 44, 75, 0.1);
+        }
+        .custom-answer label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 15px;
+        }
+
+        .error-msg {
+            color: #e53e3e;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Диагностика */
+        .diagnostic-box {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .diagnostic-box h2 {
+            color: #0a2c4b;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .diagnostic-box h3 {
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        .diagnostic-box h4 {
+            font-size: 17px;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            color: #2d3748;
+        }
+        .diagnostic-box ul {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        .diagnostic-box .highlight {
+            background: #edf2f7;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        .diagnostic-box .step-item {
+            background: white;
+            border-left: 4px solid #0a2c4b;
+            padding: 15px 18px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .diagnostic-box .step-item strong {
+            color: #0a2c4b;
+        }
+
+        .first-step-box {
+            background: #e6f0fa;
+            border-radius: 10px;
+            padding: 18px;
+            margin-top: 20px;
+            border: 1px solid #b0c4d9;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 20px 15px; }
+            h1 { font-size: 22px; }
+            .question-text { font-size: 18px; }
+            .options label { font-size: 15px; padding: 12px 14px; }
+            .nav-buttons { flex-direction: column; align-items: stretch; }
+            .nav-buttons .btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-wrapper">
+            <img src="https://dmitrizaharev.ru/workman/logo.png" alt="Человек дела" class="logo">
+        </div>
+        <h1>🧠 Диагностика бизнеса</h1>
+        <p class="subtitle">40 вопросов, которые покажут ваши системные узкие места и дадут 3 шага для прорыва</p>
+
+        <!-- ШАГ 1: ПРИВЕТСТВИЕ -->
+        <div id="step-welcome" class="step active">
+    <div class="welcome-box">
+        <p style="font-weight: 600; font-size: 18px;">Здравствуйте! Я проведу для вас диагностику бизнеса — тест из 40 вопросов.</p>
+        <ul>
+            <li>Ваш тип как предпринимателя</li>
+            <li>Системные узкие места</li>
+            <li>Личные блоки, которые мешают росту</li>
+            <li>3 конкретных шага для прорыва</li>
+        </ul>
+        <p style="margin-top: 12px;">Тест займёт 15–20 минут. Отвечайте честно — здесь нет правильных ответов.</p>
+    </div>
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 5px;">Ваше имя <span style="color: #e53e3e;">*</span></label>
+        <input type="text" id="userName" placeholder="Иван Иванов" style="width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 10px; font-size: 16px;">
+        <div id="userNameError" style="color: #e53e3e; font-size: 14px; margin-top: 5px; display: none;">Пожалуйста, укажите имя</div>
+    </div>
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 5px;">Email (необязательно)</label>
+        <input type="email" id="userEmail" placeholder="example@mail.ru" style="width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 10px; font-size: 16px;">
+    </div>
+    <button class="btn" onclick="startTest()">Начать тест</button>
+</div>
+
+        <!-- ШАГ 2: ВОПРОСЫ -->
+        <div id="step-questions" class="step">
+            <div class="question-header">
+                <span class="question-number" id="qNumber">Вопрос 1/40</span>
+                <span class="question-progress" id="qProgress">1 из 40</span>
+            </div>
+            <div class="question-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="custom-answer">
+                <label for="customInput">Или опишите своими словами (необязательно)</label>
+                <textarea id="customInput" rows="2" placeholder="Напишите свой ответ..."></textarea>
+            </div>
+            <div id="qError" class="error-msg">Пожалуйста, выберите вариант или напишите свой ответ.</div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()">← Назад</button>
+                <button class="btn" id="nextBtn" onclick="nextQuestion()">Далее →</button>
+            </div>
+        </div>
+
+        <!-- ШАГ 3: ДИАГНОСТИКА -->
+        <div id="step-diagnostic" class="step">
+            <div id="diagnosticContent"></div>
+            <button class="btn" onclick="resetTest()" style="margin-top: 25px;">Пройти тест заново</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- ДАННЫЕ ТЕСТА ----------
+        // 40 вопросов с вариантами (A, B, C, D)
+        const questions = [
+            // Блок 1: Мотивация и смысл (1-10)
+            {
+                text: "Зачем вы создали этот бизнес?",
+                options: {
+                    A: "Хотел решить проблему, которая меня лично волновала",
+                    B: "Увидел возможность заработать",
+                    C: "Хотел быть независимым и управлять своей жизнью",
+                    D: "Хотел изменить отрасль/общество"
+                }
+            },
+            {
+                text: "Что для вас значит успех в бизнесе?",
+                options: {
+                    A: "Благодарность клиентов и признание",
+                    B: "Финансовая свобода и стабильность",
+                    C: "Бизнес работает без меня",
+                    D: "Масштаб и влияние"
+                }
+            },
+            {
+                text: "Как часто вы чувствуете усталость от бизнеса?",
+                options: {
+                    A: "Почти каждый день, выгорел",
+                    B: "Периодами, когда операционка накрывает",
+                    C: "Редко, бизнес даёт энергию",
+                    D: "Не устаю, но команда выгорает"
+                }
+            },
+            {
+                text: "Куда вы направляете прибыль?",
+                options: {
+                    A: "Реинвестирую в развитие бизнеса",
+                    B: "Откладываю на подушку безопасности",
+                    C: "Забираю себе, прибыль — моя цель",
+                    D: "Не задумывался, прибыли почти нет"
+                }
+            },
+            {
+                text: "Получаете ли вы искреннюю благодарность от клиентов?",
+                options: {
+                    A: "Да, часто, это меня вдохновляет",
+                    B: "Редко, клиенты платят и уходят",
+                    C: "Не знаю, не отслеживаю",
+                    D: "Раньше было, сейчас нет"
+                }
+            },
+            {
+                text: "Вспомните момент наибольшей гордости за бизнес. Что это было?",
+                options: {
+                    A: "Отзыв клиента, который изменил жизнь благодаря вам",
+                    B: "Крупная сделка или финансовый результат",
+                    C: "Момент, когда команда справилась без вас",
+                    D: "Признание в профессиональном сообществе"
+                }
+            },
+            {
+                text: "Если завтра бизнес закроется — что вы почувствуете?",
+                options: {
+                    A: "Облегчение, устал",
+                    B: "Потерю смысла, это моя жизнь",
+                    C: "Спокойствие, начну новое",
+                    D: "Страх, что будет с деньгами/командой"
+                }
+            },
+            {
+                text: "Ваш бизнес развивает кого-то кроме вас?",
+                options: {
+                    A: "Да, команду и клиентов — это моя миссия",
+                    B: "Частично, команда растёт",
+                    C: "Нет, это просто работа",
+                    D: "Не думал об этом"
+                }
+            },
+            {
+                text: "Что бы вы изменили, если бы начинали бизнес заново?",
+                options: {
+                    A: "Фокус на ценностях, а не на деньгах",
+                    B: "Сразу выстроил бы систему и процессы",
+                    C: "Выбрал бы другую нишу",
+                    D: "Ничего, всё правильно"
+                }
+            },
+            {
+                text: "Как вы относитесь к конкурентам?",
+                options: {
+                    A: "Ищу возможности для кооперации",
+                    B: "Изучаю и учусь у них",
+                    C: "Раздражают, отнимают клиентов",
+                    D: "Не обращаю внимания"
+                }
+            },
+            // Блок 2: Система бизнеса (11-22)
+            {
+                text: "Может ли ваш бизнес работать без вас 2 недели?",
+                options: {
+                    A: "Да, всё выстроено",
+                    B: "Частично, но важные решения — я",
+                    C: "Нет, без меня развалится",
+                    D: "Не знаю, не пробовал"
+                }
+            },
+            {
+                text: "Как принимаются решения в компании?",
+                options: {
+                    A: "Коллегиально, команда вовлечена",
+                    B: "Я решаю, команда исполняет",
+                    C: "Хаотично, кто что успел",
+                    D: "Сотрудники боятся брать ответственность"
+                }
+            },
+            {
+                text: "Сколько времени вы тратите на операционку?",
+                options: {
+                    A: "80%+ времени, застрял в задачах",
+                    B: "50-70%, пытаюсь делегировать",
+                    C: "20-30%, фокус на стратегии",
+                    D: "Не считал, но чувствую, что много"
+                }
+            },
+            {
+                text: "Есть ли у вас прописанные процессы?",
+                options: {
+                    A: "Да, всё в регламентах",
+                    B: "Частично, основное в голове",
+                    C: "Нет, всё держится на людях",
+                    D: "Были, но никто не соблюдает"
+                }
+            },
+            {
+                text: "Как вы отслеживаете результаты?",
+                options: {
+                    A: "CRM, дашборды, метрики",
+                    B: "Excel-таблицы и отчёты сотрудников",
+                    C: "На глаз, по ощущениям",
+                    D: "Не отслеживаю системно"
+                }
+            },
+            {
+                text: "Как вы нанимаете сотрудников?",
+                options: {
+                    A: "По ценностям и культурному соответствию",
+                    B: "По опыту и компетенциям",
+                    C: "Кто подвернулся, лишь бы работал",
+                    D: "Боюсь нанимать, лучше сам сделаю"
+                }
+            },
+            {
+                text: "Сколько у вас ключевых сотрудников, без которых всё встанет?",
+                options: {
+                    A: "Нет таких, система устойчива",
+                    B: "1-2 человека",
+                    C: "3-5 человек",
+                    D: "Только я"
+                }
+            },
+            {
+                text: "Как вы обучаете команду?",
+                options: {
+                    A: "Регулярные тренинги и наставничество",
+                    B: "По ходу работы, как получится",
+                    C: "Нанимаю готовых специалистов",
+                    D: "Некогда обучать, сам всё показываю"
+                }
+            },
+            {
+                text: "Понимают ли сотрудники цель компании?",
+                options: {
+                    A: "Да, мы её обсуждали и записали",
+                    B: "Думаю, да, но не проверял",
+                    C: "Нет, они просто выполняют задачи",
+                    D: "У меня нет чёткой цели"
+                }
+            },
+            {
+                text: "Как вы делегируете задачи?",
+                options: {
+                    A: "Даю задачу, критерии результата и свободу",
+                    B: "Контролирую каждый шаг",
+                    C: "Делаю сам, быстрее и качественнее",
+                    D: "Делегирую, но потом переделываю"
+                }
+            },
+            {
+                text: "Сколько времени уходит на 'тушение пожаров'?",
+                options: {
+                    A: "Почти не бывает, всё предсказуемо",
+                    B: "20-30% времени",
+                    C: "Больше половины дня",
+                    D: "Постоянно в режиме пожаротушения"
+                }
+            },
+            {
+                text: "Есть ли у вас финансовая модель бизнеса?",
+                options: {
+                    A: "Да, знаю юнит-экономику и точку безубыточности",
+                    B: "Есть базовые расчёты",
+                    C: "В голове примерно понимаю",
+                    D: "Нет, работаю интуитивно"
+                }
+            },
+            // Блок 3: Ценность и клиенты (23-32)
+            {
+                text: "Почему клиенты выбирают именно вас?",
+                options: {
+                    A: "Знаю точно, они мне говорят",
+                    B: "Предполагаю, но не уверен",
+                    C: "Не знаю, наверное цена",
+                    D: "Клиенты приходят по сарафану, не анализировал"
+                }
+            },
+            {
+                text: "Как клиенты узнают о вас?",
+                options: {
+                    A: "Реклама и контент-маркетинг",
+                    B: "Рекомендации и сарафан",
+                    C: "Активные продажи (холодные звонки, встречи)",
+                    D: "Сами находят, не знаю как"
+                }
+            },
+            {
+                text: "Сколько клиентов уходят в первые 3 месяца?",
+                options: {
+                    A: "Почти никто, удержание высокое",
+                    B: "20-30%, это норма",
+                    C: "Больше половины",
+                    D: "Не отслеживаю"
+                }
+            },
+            {
+                text: "Проводите ли вы опросы удовлетворённости?",
+                options: {
+                    A: "Да, регулярно",
+                    B: "Иногда, хаотично",
+                    C: "Нет, некогда",
+                    D: "Боюсь услышать негатив"
+                }
+            },
+            {
+                text: "Знаете ли вы LTV (пожизненную ценность) клиента?",
+                options: {
+                    A: "Да, считаю и отслеживаю",
+                    B: "Примерно представляю",
+                    C: "Не считал",
+                    D: "Не знаю, что это"
+                }
+            },
+            {
+                text: "Как вы работаете с возражениями 'дорого'?",
+                options: {
+                    A: "Показываю ценность и результаты",
+                    B: "Даю скидку",
+                    C: "Теряюсь, не знаю что ответить",
+                    D: "Фильтрую таких клиентов сразу"
+                }
+            },
+            {
+                text: "Есть ли у вас программа лояльности/допродаж?",
+                options: {
+                    A: "Да, работает системно",
+                    B: "Иногда предлагаю что-то",
+                    C: "Нет, не знаю как",
+                    D: "Нет, некогда"
+                }
+            },
+            {
+                text: "Как часто клиенты возвращаются повторно?",
+                options: {
+                    A: "Больше 50% — постоянные клиенты",
+                    B: "20-40%",
+                    C: "Меньше 20%",
+                    D: "Не отслеживаю"
+                }
+            },
+            {
+                text: "Собираете ли вы отзывы и кейсы?",
+                options: {
+                    A: "Да, системно использую в маркетинге",
+                    B: "Есть несколько, но не обновляю",
+                    C: "Нет, не прошу",
+                    D: "Клиенты не дают"
+                }
+            },
+            {
+                text: "Как вы позиционируетесь на рынке?",
+                options: {
+                    A: "Чётко знаю и транслирую УТП",
+                    B: "Примерно понимаю, но не формализовал",
+                    C: "'Делаем качественно' — это моё УТП",
+                    D: "Не знаю, чем отличаюсь"
+                }
+            },
+            // Блок 4: Личные блоки и страхи (33-40)
+            {
+                text: "Что вас останавливает от делегирования?",
+                options: {
+                    A: "Боюсь, что сделают хуже меня",
+                    B: "Не знаю, как передать ответственность",
+                    C: "Не останавливает, успешно делегирую",
+                    D: "Боюсь стать ненужным"
+                }
+            },
+            {
+                text: "Что вас пугает больше всего?",
+                options: {
+                    A: "Потерять контроль над бизнесом",
+                    B: "Остаться без денег",
+                    C: "Разочаровать команду/клиентов",
+                    D: "Что всё было зря"
+                }
+            },
+            {
+                text: "Если бизнес вырастет в 10 раз — что изменится лично для вас?",
+                options: {
+                    A: "Свобода и признание",
+                    B: "Больше ответственности и стресса",
+                    C: "Не представляю, страшно",
+                    D: "Ничего, прибыль не главное"
+                }
+            },
+            {
+                text: "Что высасывает энергию в бизнесе?",
+                options: {
+                    A: "Постоянное тушение пожаров",
+                    B: "Низкое качество работы сотрудников",
+                    C: "Клиенты, которые не ценят",
+                    D: "Рутина и повторяющиеся задачи"
+                }
+            },
+            {
+                text: "Как вы относитесь к ошибкам команды?",
+                options: {
+                    A: "Это опыт, разбираем и учимся",
+                    B: "Раздражаюсь, но прощаю",
+                    C: "Злюсь, значит плохо контролировал",
+                    D: "Лучше сам сделаю, чтобы не ошиблись"
+                }
+            },
+            {
+                text: "Чего вам не хватает для прорыва?",
+                options: {
+                    A: "Времени и энергии",
+                    B: "Денег на инвестиции",
+                    C: "Знаний и компетенций",
+                    D: "Понимания, куда двигаться"
+                }
+            },
+            {
+                text: "Как вы восстанавливаетесь после стресса?",
+                options: {
+                    A: "Есть система: спорт, хобби, отдых",
+                    B: "Работаю ещё больше, чтобы отвлечься",
+                    C: "Не восстанавливаюсь, терплю",
+                    D: "Не было времени на стресс"
+                }
+            },
+            {
+                text: "Если бы вы продавали бизнес через год — что сделали бы прямо сейчас?",
+                options: {
+                    A: "Выстроил систему и процессы",
+                    B: "Увеличил прибыль",
+                    C: "Нашёл преемника и передал управление",
+                    D: "Не знаю, не думал о продаже"
+                }
+            }
+        ];
+
+        // ---------- СОСТОЯНИЕ ----------
+        // 0 = welcome, 1..40 = вопросы (индекс вопроса = currentStep-1), 41 = диагностика
+        [];            // массив длиной 40, хранит { letter: 'A'|'B'|'C'|'D'|null, text: string }
+        let currentStep = 0;
+let answers = [];
+let currentQuestionIndex = 0;
+let userName = '';
+let userEmail = ''; // 0-39
+
+        // Инициализация answers
+        for (let i = 0; i < 40; i++) {
+            answers.push({ letter: null, text: '' });
+        }
+
+        // DOM ссылки
+        const stepWelcome = document.getElementById('step-welcome');
+        const stepQuestions = document.getElementById('step-questions');
+        const stepDiagnostic = document.getElementById('step-diagnostic');
+        const qNumber = document.getElementById('qNumber');
+        const qProgress = document.getElementById('qProgress');
+        const qText = document.getElementById('qText');
+        const qOptions = document.getElementById('qOptions');
+        const customInput = document.getElementById('customInput');
+        const qError = document.getElementById('qError');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        // ---------- ФУНКЦИИ ----------
+        function showStep(stepId) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById(stepId).classList.add('active');
+        }
+
+        function startTest() {
+    const nameInput = document.getElementById('userName');
+    const emailInput = document.getElementById('userEmail');
+    userName = nameInput.value.trim();
+    userEmail = emailInput.value.trim();
+    if (userName === '') {
+        document.getElementById('userNameError').style.display = 'block';
+        return;
+    } else {
+        document.getElementById('userNameError').style.display = 'none';
+    }
+    currentQuestionIndex = 0;
+    showStep('step-questions');
+    renderQuestion(currentQuestionIndex);
+}
+
+        function renderQuestion(index) {
+            const q = questions[index];
+            qNumber.textContent = `Вопрос ${index+1}/40`;
+            qProgress.textContent = `${index+1} из 40`;
+            qText.textContent = q.text;
+
+            // Генерируем варианты
+            let html = '';
+            const letters = ['A', 'B', 'C', 'D'];
+            letters.forEach(letter => {
+                const checked = (answers[index].letter === letter) ? 'checked' : '';
+                html += `<label>
+                    <input type="radio" name="question" value="${letter}" ${checked}>
+                    <span><span class="letter">${letter})</span> ${q.options[letter]}</span>
+                </label>`;
+            });
+            qOptions.innerHTML = html;
+
+            // Восстанавливаем текст
+            customInput.value = answers[index].text || '';
+
+            // Обновляем кнопки
+            prevBtn.style.display = (index === 0) ? 'none' : 'inline-block';
+            nextBtn.textContent = (index === 39) ? 'Завершить' : 'Далее →';
+
+            // Сброс ошибки
+            qError.style.display = 'none';
+        }
+
+        function getSelectedLetter() {
+            const radios = document.querySelectorAll('input[name="question"]');
+            for (let r of radios) {
+                if (r.checked) return r.value;
+            }
+            return null;
+        }
+
+        function saveCurrentAnswer() {
+            const letter = getSelectedLetter();
+            const text = customInput.value.trim();
+            // Если ничего не выбрано и текст пуст – ошибка
+            if (!letter && text === '') {
+                qError.style.display = 'block';
+                return false;
+            }
+            qError.style.display = 'none';
+            answers[currentQuestionIndex].letter = letter;
+            answers[currentQuestionIndex].text = text;
+            return true;
+        }
+
+        function nextQuestion() {
+            if (!saveCurrentAnswer()) return;
+
+            if (currentQuestionIndex === 39) {
+                // Завершить тест
+                finishTest();
+            } else {
+                currentQuestionIndex++;
+                renderQuestion(currentQuestionIndex);
+                // Прокрутка вверх
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                // сохраняем текущий ответ перед переходом
+                saveCurrentAnswer();
+                currentQuestionIndex--;
+                renderQuestion(currentQuestionIndex);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function finishTest() {
+    // Сохраняем последний ответ
+    saveCurrentAnswer();
+    // Переходим к диагностике
+    showStep('step-diagnostic');
+    const diagContent = document.getElementById('diagnosticContent');
+    diagContent.innerHTML = generateDiagnostic(answers);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Отправка данных на сервер
+    sendResultsToServer();
+}
+
+// Новая функция отправки
+function sendResultsToServer() {
+    // Формируем текстовое содержимое с ответами
+    let content = `Диагностика бизнеса (40 вопросов)\n`;
+    content += `Имя: ${userName}\n`;
+    content += `Email: ${userEmail}\n`;
+    content += `Дата: ${new Date().toLocaleString('ru-RU')}\n`;
+    content += `========================================\n\n`;
+    for (let i = 0; i < questions.length; i++) {
+        const ans = answers[i];
+        const letter = ans.letter || '—';
+        const text = ans.text || '';
+        content += `${i+1}. ${questions[i].text}\n`;
+        content += `   Ответ: ${letter} ${text ? ' ('+text+')' : ''}\n`;
+    }
+    
+    const formData = new FormData();
+    formData.append('user_name', userName);
+    formData.append('content', content);
+    
+    fetch('save.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const diagContent = document.getElementById('diagnosticContent');
+            const saveMsg = document.createElement('div');
+            saveMsg.style.background = '#c6f6d5';
+            saveMsg.style.padding = '10px';
+            saveMsg.style.borderRadius = '8px';
+            saveMsg.style.marginTop = '20px';
+            saveMsg.textContent = `✅ Ваши ответы сохранены на сервере (файл: ${data.filename})`;
+            diagContent.appendChild(saveMsg);
+        } else {
+            console.error('Ошибка сохранения:', data.error);
+        }
+    })
+    .catch(err => {
+        console.error('Ошибка сети:', err);
+    });
+}
+
+        function resetTest() {
+            // Сброс всех ответов
+            for (let i = 0; i < 40; i++) {
+                answers[i] = { letter: null, text: '' };
+            }
+            currentQuestionIndex = 0;
+            showStep('step-welcome');
+            document.getElementById('diagnosticContent').innerHTML = '';
+        }
+
+        // ---------- ЛОГИКА АНАЛИЗА ----------
+        function getAnswerLetter(qIndex) {
+            return answers[qIndex] ? answers[qIndex].letter : null;
+        }
+
+        function getAnswerText(qIndex) {
+            return answers[qIndex] ? answers[qIndex].text : '';
+        }
+
+        // Определение типа предпринимателя
+        function determineType(answers) {
+            // Считаем совпадения для каждого типа
+            const types = {
+                'Строитель': { count: 0, conditions: [
+                    { q: 1, letter: 'B' }, // 2B (индекс 1)
+                    { q: 2, letter: 'B' }, // 3B
+                    { q: 3, letter: 'A' }, // 4A
+                    { q: 5, letter: 'C' }, // 6C
+                    { q: 8, letter: 'B' }  // 9B
+                ]},
+                'Миссионер': { count: 0, conditions: [
+                    { q: 0, letter: 'A' }, // 1A
+                    { q: 1, letter: 'A' }, // 2A
+                    { q: 4, letter: 'A' }, // 5A
+                    { q: 7, letter: 'A' }, // 8A
+                    { q: 9, letter: 'A' }  // 10A
+                ]},
+                'Мастер': { count: 0, conditions: [
+                    { q: 0, letter: 'A' }, // 1A
+                    { q: 1, letter: 'A' }, // 2A
+                    { q: 5, letter: 'D' }, // 6D
+                    { q: 6, letter: 'B' }, // 7B
+                    { q: 8, letter: 'D' }  // 9D
+                ]},
+                'Партнёр': { count: 0, conditions: [
+                    { q: 0, letter: 'D' }, // 1D
+                    { q: 7, letter: 'A' }, // 8A
+                    { q: 9, letter: 'A' }  // 10A
+                ]},
+                'Капитан': { count: 0, conditions: [
+                    { q: 1, letter: 'D' }, // 2D
+                    { q: 2, letter: 'D' }, // 3D
+                    { q: 5, letter: 'D' }, // 6D
+                    { q: 6, letter: 'B' }  // 7B
+                ]},
+                'Искатель': { count: 0, conditions: [
+                    { q: 2, letter: 'A' }, // 3A
+                    { q: 3, letter: 'D' }, // 4D
+                    { q: 4, letter: 'D' }, // 5D
+                    { q: 6, letter: 'A' }, // 7A
+                    { q: 8, letter: 'C' }  // 9C
+                ]}
+            };
+
+            // Подсчёт для каждого типа
+            for (let type in types) {
+                let count = 0;
+                for (let cond of types[type].conditions) {
+                    const ans = getAnswerLetter(cond.q);
+                    if (ans === cond.letter) count++;
+                }
+                types[type].count = count;
+            }
+
+            // Находим тип с максимальным count
+            let maxCount = 0;
+            let bestType = 'Искатель'; // по умолчанию
+            for (let type in types) {
+                if (types[type].count > maxCount) {
+                    maxCount = types[type].count;
+                    bestType = type;
+                }
+            }
+            return bestType;
+        }
+
+        // Описания типов (короткие)
+        const typeDescriptions = {
+            'Строитель': 'Вы ориентированы на системы, процессы и стабильность. Ваша сила — создавать устойчивые структуры, но иногда вы застреваете в деталях и теряете гибкость.',
+            'Миссионер': 'Вы движимы ценностями и желанием помогать людям. Ваша миссия — развивать команду и клиентов, но вы можете забывать о прибыли и масштабировании.',
+            'Мастер': 'Вы эксперт, гордитесь качеством и признанием. Ваша сила — глубокое знание своего дела, но вы часто берёте всё на себя, не доверяя команде.',
+            'Партнёр': 'Вы умеете договариваться и создавать win-win. Ваша сила — кооперация и связи, но вам может не хватать фокуса на собственных системах.',
+            'Капитан': 'Вы амбициозны, стремитесь к масштабу и влиянию. Ваша сила — видение и энергия, но вы рискуете перегрузить себя и команду.',
+            'Искатель': 'Вы чувствуете усталость и потерю смысла. Вам нужно пересмотреть цели и найти новый источник энергии, иначе бизнес может заглохнуть.'
+        };
+
+        // Сильные стороны и боли (для каждого типа)
+        const typeStrengths = {
+            'Строитель': 'Создание процессов и порядка',
+            'Миссионер': 'Вдохновение и развитие людей',
+            'Мастер': 'Экспертность и качество',
+            'Партнёр': 'Построение отношений и кооперация',
+            'Капитан': 'Амбиции и стратегическое видение',
+            'Искатель': 'Гибкость и умение адаптироваться'
+        };
+        const typePains = {
+            'Строитель': 'Слишком много времени на операционку, нехватка стратегии',
+            'Миссионер': 'Забываете о прибыли, сложно масштабироваться',
+            'Мастер': 'Не делегируете, выгораете от перегрузки',
+            'Партнёр': 'Размываете фокус, зависите от других',
+            'Капитан': 'Перегружаете себя и команду, страх потерять контроль',
+            'Искатель': 'Потеря смысла, неопределённость, выгорание'
+        };
+
+        // Определение проблем
+        function findProblems(answers) {
+            const problems = [];
+
+            // Застрял в операционке
+            const opConditions = [10, 12, 16, 19, 20]; // индексы вопросов 11,13,17,20,21 (0-based)
+            // 11C -> index 10, letter C; 13A -> index 12, A; 17D -> index 16, D; 20B/C -> index 19, B или C; 21C/D -> index 20, C или D
+            let opCount = 0;
+            if (getAnswerLetter(10) === 'C') opCount++;
+            if (getAnswerLetter(12) === 'A') opCount++;
+            if (getAnswerLetter(16) === 'D') opCount++;
+            if (getAnswerLetter(19) === 'B' || getAnswerLetter(19) === 'C') opCount++;
+            if (getAnswerLetter(20) === 'C' || getAnswerLetter(20) === 'D') opCount++;
+            if (opCount >= 2) {
+                problems.push({
+                    id: 'operational',
+                    title: 'Застрял в операционке',
+                    desc: 'Вы тратите слишком много времени на текучку и тушение пожаров. Бизнес держится на вас, что ограничивает рост и ведёт к выгоранию.'
+                });
+            }
+
+            // Не может делегировать
+            const delConditions = [11, 19, 32, 36]; // 12B -> index11 B; 20C/D -> index19 C/D; 33A/B/D -> index32 A/B/D; 37C/D -> index36 C/D
+            let delCount = 0;
+            if (getAnswerLetter(11) === 'B') delCount++;
+            if (getAnswerLetter(19) === 'C' || getAnswerLetter(19) === 'D') delCount++;
+            if (getAnswerLetter(32) === 'A' || getAnswerLetter(32) === 'B' || getAnswerLetter(32) === 'D') delCount++;
+            if (getAnswerLetter(36) === 'C' || getAnswerLetter(36) === 'D') delCount++;
+            if (delCount >= 2) {
+                problems.push({
+                    id: 'delegation',
+                    title: 'Не можете делегировать',
+                    desc: 'Вы контролируете каждый шаг или делаете всё сами. Это мешает масштабированию, подрывает доверие команды и ведёт к выгоранию.'
+                });
+            }
+
+            // Не знает своё УТП
+            const utpConditions = [22, 31]; // 23B/C/D -> index22 B/C/D; 32B/C/D -> index31 B/C/D
+            let utpCount = 0;
+            if (['B','C','D'].includes(getAnswerLetter(22))) utpCount++;
+            if (['B','C','D'].includes(getAnswerLetter(31))) utpCount++;
+            if (utpCount >= 1) {
+                problems.push({
+                    id: 'utp',
+                    title: 'Не знаете своё УТП',
+                    desc: 'Вы не можете чётко сформулировать, почему клиенты выбирают вас. Это снижает эффективность маркетинга и продаж, клиенты не понимают вашу ценность.'
+                });
+            }
+
+            // Клиенты уходят
+            const clientConditions = [24, 29, 25]; // 25B/C -> index24 B/C; 30C -> index29 C; 26C/D -> index25 C/D
+            let clientCount = 0;
+            if (['B','C'].includes(getAnswerLetter(24))) clientCount++;
+            if (getAnswerLetter(29) === 'C') clientCount++;
+            if (['C','D'].includes(getAnswerLetter(25))) clientCount++;
+            if (clientCount >= 2) {
+                problems.push({
+                    id: 'churn',
+                    title: 'Клиенты уходят',
+                    desc: 'Вы теряете клиентов на ранних этапах или не отслеживаете их удержание. Это съедает прибыль и требует постоянного притока новых.'
+                });
+            }
+
+            // Нет системы привлечения
+            const attractConditions = [23, 26, 28]; // 24D -> index23 D; 27C/D -> index26 C/D; 29C/D -> index28 C/D
+            let attractCount = 0;
+            if (getAnswerLetter(23) === 'D') attractCount++;
+            if (['C','D'].includes(getAnswerLetter(26))) attractCount++;
+            if (['C','D'].includes(getAnswerLetter(28))) attractCount++;
+            if (attractCount >= 2) {
+                problems.push({
+                    id: 'attraction',
+                    title: 'Нет системы привлечения клиентов',
+                    desc: 'Вы не знаете, откуда приходят клиенты, не используете системный маркетинг. Рост непредсказуем, вы зависите от сарафана и случая.'
+                });
+            }
+
+            // Выгорание
+            const burnConditions = [2, 6, 35, 37, 38]; // 3A -> index2 A; 7A -> index6 A; 36A/B/C -> index35 A/B/C; 38A -> index37 A; 39C -> index38 C
+            let burnCount = 0;
+            if (getAnswerLetter(2) === 'A') burnCount++;
+            if (getAnswerLetter(6) === 'A') burnCount++;
+            if (['A','B','C'].includes(getAnswerLetter(35))) burnCount++;
+            if (getAnswerLetter(37) === 'A') burnCount++;
+            if (getAnswerLetter(38) === 'C') burnCount++;
+            if (burnCount >= 2) {
+                problems.push({
+                    id: 'burnout',
+                    title: 'Эмоциональное выгорание',
+                    desc: 'Вы чувствуете усталость, потерю смысла или энергии. Бизнес перестал приносить радость, и вы рискуете сорваться или закрыть проект.'
+                });
+            }
+
+            // Страх роста
+            const fearConditions = [33, 34, 37]; // 34A -> index33 A; 35B/C -> index34 B/C; 38D -> index37 D
+            let fearCount = 0;
+            if (getAnswerLetter(33) === 'A') fearCount++;
+            if (['B','C'].includes(getAnswerLetter(34))) fearCount++;
+            if (getAnswerLetter(37) === 'D') fearCount++;
+            if (fearCount >= 2) {
+                problems.push({
+                    id: 'fear_growth',
+                    title: 'Страх роста',
+                    desc: 'Вы боитесь масштабироваться, потому что это несёт больше ответственности, стресса или неопределённости. Это тормозит развитие бизнеса.'
+                });
+            }
+
+            // Если проблем меньше 3, добавляем общие
+            if (problems.length < 3) {
+                // Добавляем наиболее вероятные на основе ответов
+                // Если нет проблем, добавляем дефолтные
+                if (problems.length === 0) {
+                    problems.push({
+                        id: 'default1',
+                        title: 'Отсутствие системного подхода',
+                        desc: 'Ваш бизнес во многом держится на интуиции и личных усилиях. Это создаёт риски при масштабировании и снижает предсказуемость.'
+                    });
+                    problems.push({
+                        id: 'default2',
+                        title: 'Недостаточная работа с клиентами',
+                        desc: 'Вы не используете системные инструменты для удержания и анализа клиентов, что ограничивает рост LTV и повторных продаж.'
+                    });
+                    problems.push({
+                        id: 'default3',
+                        title: 'Личные блоки мешают росту',
+                        desc: 'Ваши страхи и неуверенность отражаются на бизнесе. Работа над собой может дать больший рывок, чем любые тактические шаги.'
+                    });
+                } else {
+                    // есть одна-две проблемы, дополним
+                    if (!problems.find(p => p.id === 'default1')) {
+                        problems.push({
+                            id: 'default1',
+                            title: 'Отсутствие системного подхода',
+                            desc: 'Ваш бизнес во многом держится на интуиции и личных усилиях. Это создаёт риски при масштабировании и снижает предсказуемость.'
+                        });
+                    }
+                    if (problems.length < 3 && !problems.find(p => p.id === 'default2')) {
+                        problems.push({
+                            id: 'default2',
+                            title: 'Недостаточная работа с клиентами',
+                            desc: 'Вы не используете системные инструменты для удержания и анализа клиентов, что ограничивает рост LTV и повторных продаж.'
+                        });
+                    }
+                }
+            }
+
+            // Ограничиваем 3 проблемы
+            return problems.slice(0, 3);
+        }
+
+        // Поиск противоречий (для скрытой причины)
+        function findContradictions(answers) {
+            const contradictions = [];
+            // Прибыль не главное (4D) но боится остаться без денег (34B)
+            if (getAnswerLetter(3) === 'D' && getAnswerLetter(33) === 'B') {
+                contradictions.push('Вы говорите, что прибыль не главное, но при этом боитесь остаться без денег. Это внутренний конфликт, который мешает принимать смелые решения.');
+            }
+            // Хочет делегировать (20A) но без меня развалится (11C)
+            if (getAnswerLetter(19) === 'A' && getAnswerLetter(10) === 'C') {
+                contradictions.push('Вы хотите делегировать, но уверены, что без вас бизнес развалится. Это противоречие говорит об отсутствии системы и доверия к команде.');
+            }
+            // Знает УТП (32A) но клиенты приходят по сарафану (24B)
+            if (getAnswerLetter(31) === 'A' && getAnswerLetter(23) === 'B') {
+                contradictions.push('Вы знаете своё УТП, но не используете его в маркетинге — клиенты приходят по сарафану. Упускаете возможность системного привлечения.');
+            }
+            // Если нет явных, добавим общее
+            if (contradictions.length === 0) {
+                contradictions.push('Ваши ответы показывают разрыв между желаемым и фактическим состоянием бизнеса. Вы видите цели, но не выстроили системные шаги к ним.');
+            }
+            return contradictions;
+        }
+
+        // Связь личного и бизнеса
+        function findPersonalBusinessLinks(answers) {
+            const links = [];
+            // Страх ошибок команды (37C) -> не делегирует (20C) -> застрял в операционке (13A)
+            if (getAnswerLetter(36) === 'C' && getAnswerLetter(19) === 'C' && getAnswerLetter(12) === 'A') {
+                links.push('Ваш страх ошибок команды заставляет вас всё контролировать и делать самому, что ведёт к застреванию в операционке и выгоранию.');
+            }
+            // Страх стать ненужным (33D) -> контролирует всё (20B) -> выгорание (3A)
+            if (getAnswerLetter(32) === 'D' && getAnswerLetter(19) === 'B' && getAnswerLetter(2) === 'A') {
+                links.push('Боязнь стать ненужным заставляет вас контролировать каждый шаг, лишая команду самостоятельности и приводя к вашему выгоранию.');
+            }
+            // Не понимает смысл (4D, 7A) -> нет УТП (32D) -> клиенты уходят (25C)
+            if (getAnswerLetter(3) === 'D' && getAnswerLetter(6) === 'A' && getAnswerLetter(31) === 'D' && getAnswerLetter(24) === 'C') {
+                links.push('Отсутствие чёткого смысла и миссии отражается на вашем позиционировании, клиенты не чувствуют ценности и уходят к конкурентам.');
+            }
+            if (links.length === 0) {
+                links.push('Ваши личные установки и страхи напрямую влияют на бизнес-процессы. Важно осознать эти связи, чтобы начать их прорабатывать.');
+            }
+            return links;
+        }
+
+        // Генерация шагов на основе проблем
+        function generateSteps(problems, type) {
+            const steps = [];
+            // Сопоставляем проблемы с конкретными шагами
+            const stepTemplates = {
+                'operational': {
+                    title: 'Начните системно делегировать операционные задачи',
+                    action: 'Выберите одну повторяющуюся задачу (например, подготовку отчётов или обработку входящих звонков). Запишите видео-инструкцию на 5 минут: что делать, зачем это нужно, как проверить результат. Передайте задачу сотруднику и не вмешивайтесь в процесс в течение недели. Это первый шаг к выходу из операционки.',
+                    result: 'Освободите время для стратегии, команда начнёт расти, снизится ваша усталость.'
+                },
+                'delegation': {
+                    title: 'Освойте делегирование через чёткие инструкции',
+                    action: 'Возьмите задачу, которую вы делаете чаще всего. Распишите алгоритм из 5 шагов, снимите короткое видео или запишите аудио-инструкцию. Передайте сотруднику, поставьте срок и договоритесь о контрольной точке. Не исправляйте его работу, даже если будет неидеально — учитесь доверять.',
+                    result: 'Команда станет самостоятельнее, вы перестанете быть узким горлышком, сможете масштабироваться.'
+                },
+                'utp': {
+                    title: 'Сформулируйте и протестируйте своё УТП',
+                    action: 'Ответьте на вопрос: «Почему клиенты выбирают нас, а не конкурентов?» Запишите 3–5 причин. Затем опросите 10 текущих клиентов, что они ценят в вас больше всего. Совместите ответы и создайте одно предложение — ваше УТП. Разместите его на сайте и в соцсетях.',
+                    result: 'Вы станете заметнее для целевой аудитории, маркетинг будет более целенаправленным, клиенты будут выбирать вас осознанно.'
+                },
+                'churn': {
+                    title: 'Внедрите систему удержания клиентов',
+                    action: 'Заведите CRM или простую таблицу, где будете фиксировать дату обращения, имя клиента, его проблему и ваш контакт. Раз в месяц обзванивайте клиентов, которые не покупали более 3 месяцев, предлагайте персонализированное предложение. Настройте автоматические напоминания о благодарности после покупки.',
+                    result: 'Повысите лояльность, увеличите LTV и повторные продажи, сократите отток.'
+                },
+                'attraction': {
+                    title: 'Постройте систему привлечения через контент и аналитику',
+                    action: 'Заведите Google-таблицу с 3 столбцами: дата обращения, имя клиента, откуда пришёл. Попросите менеджера заполнять её после каждого звонка. Через неделю увидите, какой канал даёт больше заявок. Сфокусируйтесь на этом канале и создайте контент для него (статьи, видео, посты).',
+                    result: 'Вы поймёте, где искать клиентов, сможете прогнозировать поток заявок и уменьшить зависимость от случайностей.'
+                },
+                'burnout': {
+                    title: 'Восстановите энергию через личные ритуалы',
+                    action: 'Введите правило: 2 часа в день без рабочих вопросов (утром или вечером). Займитесь спортом, хобби или прогулкой. Пересмотрите список задач — делегируйте или откажитесь от того, что не приносит ценности. Запланируйте выходные без бизнеса хотя бы раз в месяц.',
+                    result: 'Вы вернёте вкус к жизни и бизнесу, повысите продуктивность, снизите риск профессионального выгорания.'
+                },
+                'fear_growth': {
+                    title: 'Перестаньте бояться роста — начните с малого',
+                    action: 'Выберите один аспект, который вы можете масштабировать без больших рисков: например, увеличить средний чек через пакетное предложение или запустить партнёрскую программу. Напишите план из 3 шагов и реализуйте его в течение месяца. Отслеживайте только один ключевой показатель.',
+                    result: 'Вы начнёте видеть, что рост возможен и управляем, страх уменьшится, появится уверенность.'
+                }
+            };
+
+            // Добавляем шаги для выявленных проблем
+            let usedIds = [];
+            for (let p of problems) {
+                if (stepTemplates[p.id] && !usedIds.includes(p.id)) {
+                    steps.push({
+                        title: stepTemplates[p.id].title,
+                        action: stepTemplates[p.id].action,
+                        result: stepTemplates[p.id].result
+                    });
+                    usedIds.push(p.id);
+                }
+            }
+
+            // Если осталось меньше 3, добавляем общие шаги
+            if (steps.length < 3) {
+                const defaultSteps = [
+                    {
+                        title: 'Проведите аудит текущих процессов',
+                        action: 'Выпишите все повторяющиеся задачи, которые вы делаете за неделю. Разделите их на 3 группы: стратегические, операционные и рутинные. Передайте рутинные задачи ассистенту или младшему сотруднику. Начните со стратегических — уделите им 30 минут каждое утро.',
+                        result: 'Вы увидите структуру своего времени и сможете переключиться на развитие.'
+                    },
+                    {
+                        title: 'Усильте клиентский сервис',
+                        action: 'Внедрите правило «одного касания»: каждый клиент, обратившийся к вам, должен получить ответ или решение в течение часа. Запустите простой опрос удовлетворённости после каждой покупки (3 вопроса: понравилось ли, что улучшить, готовы ли порекомендовать).',
+                        result: 'Повысите лояльность, получите больше рекомендаций и повторных продаж.'
+                    },
+                    {
+                        title: 'Создайте личный план восстановления',
+                        action: 'Запланируйте 3 активности, которые вас заряжают (спорт, чтение, прогулка). Включите их в календарь как неотменяемые встречи. Раз в неделю анализируйте свой уровень энергии и корректируйте план.',
+                        result: 'Вы будете более устойчивы к стрессу и сможете принимать взвешенные решения.'
+                    }
+                ];
+                let idx = 0;
+                while (steps.length < 3 && idx < defaultSteps.length) {
+                    if (!usedIds.includes('default' + idx)) {
+                        steps.push(defaultSteps[idx]);
+                        usedIds.push('default' + idx);
+                    }
+                    idx++;
+                }
+            }
+
+            return steps;
+        }
+
+        // Основная функция генерации диагностики
+        function generateDiagnostic(answers) {
+            const type = determineType(answers);
+            const problems = findProblems(answers);
+            const contradictions = findContradictions(answers);
+            const links = findPersonalBusinessLinks(answers);
+            const steps = generateSteps(problems, type);
+
+            // Формируем HTML
+            let html = `<div class="diagnostic-box">`;
+            html += `<h2># ВАША ДИАГНОСТИКА</h2>`;
+            html += `<h3>ТИП: ${type}</h3>`;
+            html += `<p>${typeDescriptions[type]}</p>`;
+            html += `<p><strong>Ваша сильная сторона:</strong> ${typeStrengths[type]}</p>`;
+            html += `<p><strong>Ваша боль:</strong> ${typePains[type]}</p>`;
+            html += `<hr>`;
+
+            html += `<h3>ЧТО Я УВИДЕЛ (ДИАГНОЗ)</h3>`;
+            for (let i = 0; i < problems.length; i++) {
+                html += `<div class="step-item"><strong>${i+1}. ${problems[i].title}</strong><br>${problems[i].desc}</div>`;
+            }
+
+            html += `<div class="highlight"><strong>Скрытая причина:</strong><br>${contradictions.join(' ')}<br>`;
+            html += `<strong>Связь личного и бизнеса:</strong><br>${links.join(' ')}</div>`;
+
+            html += `<h3>ЧТО ДЕЛАТЬ (3 КОНКРЕТНЫХ ШАГА)</h3>`;
+            for (let i = 0; i < steps.length; i++) {
+                html += `<div class="step-item"><strong>Шаг ${i+1}: ${steps[i].title}</strong><br>`;
+                html += `<strong>ЧТО:</strong> ${steps[i].action}<br>`;
+                html += `<strong>РЕЗУЛЬТАТ:</strong> ${steps[i].result}</div>`;
+            }
+
+            // Первый шаг на завтра
+            const firstStep = steps.length > 0 ? steps[0] : { title: 'Начните с малого', action: 'Выберите одну задачу из списка и сделайте её завтра в первые 30 минут рабочего дня. Просто начните.' };
+            html += `<div class="first-step-box"><strong>ПЕРВЫЙ ШАГ НА ЗАВТРА:</strong><br>${firstStep.action}</div>`;
+
+            html += `<hr><p style="text-align: center; color: #4a5568;">Как вам эта диагностика? Что откликается больше всего?</p>`;
+            html += `</div>`;
+            return html;
+        }
+
+        // Обработчик Enter в текстовом поле для удобства
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.id === 'customInput') {
+                e.preventDefault();
+                nextQuestion();
+            }
+        });
+
+        // Привязываем события
+        window.startTest = startTest;
+        window.nextQuestion = nextQuestion;
+        window.prevQuestion = prevQuestion;
+        window.resetTest = resetTest;
+
+        // Инициализация
+        renderQuestion(0);
+    </script>
+</body>
+</html>

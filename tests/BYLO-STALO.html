@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Патчер файлов — замена фрагментов (с подсветкой)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f5f7fa;
+            padding: 30px 20px;
+            color: #1a1a1a;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            padding: 30px 25px;
+        }
+        h1 { font-size: 26px; color: #0a2c4b; margin-bottom: 8px; }
+        .sub { color: #4a5568; margin-bottom: 25px; font-size: 15px; }
+        .row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .col { flex: 1 1 300px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; color: #2d3748; }
+        textarea, input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        textarea { min-height: 200px; resize: vertical; }
+        textarea:focus {
+            outline: none;
+            border-color: #0a2c4b;
+            box-shadow: 0 0 0 3px rgba(10,44,75,0.1);
+        }
+        .btn {
+            background: #0a2c4b;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover { background: #143b5e; transform: translateY(-1px); }
+        .btn-secondary { background: #e2e8f0; color: #1a1a1a; }
+        .btn-secondary:hover { background: #cbd5e0; }
+        .btn-success { background: #2f855a; }
+        .btn-success:hover { background: #276749; }
+        .btn-danger { background: #c53030; }
+        .btn-danger:hover { background: #9b2c2c; }
+        .btn-warning { background: #d69e2e; color: white; }
+        .btn-warning:hover { background: #b7791f; }
+        .result-box { margin-top: 25px; border-top: 2px dashed #e2e8f0; padding-top: 25px; }
+        .result-box h2 { font-size: 20px; margin-bottom: 12px; }
+        .preview {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+        }
+        .highlight {
+            background: #fbd38d;
+            padding: 2px 0;
+            border-radius: 3px;
+        }
+        .stats {
+            background: #edf2f7;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .error { color: #c53030; background: #fed7d7; padding: 10px 15px; border-radius: 8px; margin: 10px 0; }
+        .success { color: #276749; background: #c6f6d5; padding: 10px 15px; border-radius: 8px; margin: 10px 0; }
+        .info { color: #2b6cb0; background: #bee3f8; padding: 10px 15px; border-radius: 8px; margin: 10px 0; }
+        .file-info { background: #e6f0fa; padding: 8px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+        .flex-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+        .checkbox-group input { width: 18px; height: 18px; accent-color: #0a2c4b; }
+        @media (max-width: 700px) { .container { padding: 20px 15px; } .row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧩 Патчер файлов (замена фрагментов)</h1>
+    <p class="sub">Загрузите файл, укажите фрагмент «БЫЛО» и «СТАЛО» — скрипт выполнит замену и даст скачать обновлённую версию. Можно делать несколько правок подряд.</p>
+
+    <div class="file-info" id="fileInfo">Файл не загружен</div>
+
+    <div class="row">
+        <div class="col">
+            <label for="fileInput">1. Загрузите исходный файл</label>
+            <input type="file" id="fileInput" accept="*/*">
+            <div style="font-size: 13px; color: #718096; margin-top: 5px;">Выберите «Все файлы» в проводнике, чтобы загрузить .php и другие</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <label for="wasInput">2. Фрагмент <strong>БЫЛО</strong> (искать)</label>
+            <textarea id="wasInput" placeholder="Вставьте точный текст, который нужно заменить..."></textarea>
+        </div>
+        <div class="col">
+            <label for="becomeInput">3. Фрагмент <strong>СТАЛО</strong> (заменить на)</label>
+            <textarea id="becomeInput" placeholder="Вставьте новый текст..."></textarea>
+        </div>
+    </div>
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="strictMode">
+        <label for="strictMode" style="font-weight: 400; cursor: pointer;">Точное соответствие (с учётом пробелов и переносов)</label>
+        <span style="font-size: 14px; color: #4a5568; margin-left: 10px;">(если выключено — пробелы и переносы игнорируются)</span>
+    </div>
+
+    <div class="flex-actions">
+        <button class="btn" id="applyBtn">🔁 Применить замену</button>
+        <button class="btn btn-warning" id="checkBtn">🔍 Проверить Было (подсветить)</button>
+        <button class="btn btn-secondary" id="resetBtn">🔄 Сбросить (загрузить заново)</button>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="result-box" id="resultBox" style="display:none;">
+        <h2>📄 Результат</h2>
+        <div id="stats" class="stats"></div>
+        <div class="preview" id="preview"></div>
+        <div class="flex-actions">
+            <button class="btn btn-success" id="downloadOriginalBtn">⬇️ Скачать с оригинальным именем</button>
+            <button class="btn" id="downloadPatchedBtn">⬇️ Скачать с суффиксом</button>
+            <button class="btn" id="continueBtn">✏️ Продолжить редактирование (с этим файлом)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // Состояние
+        let originalContent = '';
+        let currentContent = '';
+        let fileName = '';
+        let fileType = '';
+
+        // DOM
+        const fileInput = document.getElementById('fileInput');
+        const wasInput = document.getElementById('wasInput');
+        const becomeInput = document.getElementById('becomeInput');
+        const strictMode = document.getElementById('strictMode');
+        const applyBtn = document.getElementById('applyBtn');
+        const checkBtn = document.getElementById('checkBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const downloadOriginalBtn = document.getElementById('downloadOriginalBtn');
+        const downloadPatchedBtn = document.getElementById('downloadPatchedBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const message = document.getElementById('message');
+        const resultBox = document.getElementById('resultBox');
+        const preview = document.getElementById('preview');
+        const stats = document.getElementById('stats');
+        const fileInfo = document.getElementById('fileInfo');
+
+        // Загрузка файла
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            fileName = file.name;
+            fileType = file.type;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                originalContent = ev.target.result;
+                currentContent = originalContent;
+                fileInfo.textContent = `📂 Файл: ${fileName} (${(originalContent.length/1024).toFixed(1)} КБ) — готов к правкам.`;
+                message.innerHTML = '';
+                resultBox.style.display = 'none';
+                wasInput.value = '';
+                becomeInput.value = '';
+            };
+            reader.readAsText(file);
+        });
+
+        function showMsg(text, type) {
+            message.innerHTML = `<div class="${type}">${text}</div>`;
+        }
+
+        function escapeRegexExceptSpaces(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Поиск фрагмента (возвращает объект с индексом, длиной и найденным текстом)
+        function findFragment(was, content, strict) {
+            if (strict) {
+                const idx = content.indexOf(was);
+                if (idx === -1) return null;
+                return { index: idx, length: was.length, matched: was };
+            } else {
+                const escaped = escapeRegexExceptSpaces(was);
+                const regexPattern = escaped.replace(/\s+/g, '\\s+');
+                const regex = new RegExp(regexPattern, 's');
+                const match = regex.exec(content);
+                if (!match) return null;
+                return { index: match.index, length: match[0].length, matched: match[0] };
+            }
+        }
+
+        // Подсветка найденного фрагмента в содержимом
+        function highlightFragment(content, fragmentInfo) {
+            if (!fragmentInfo) return content;
+            const { index, length, matched } = fragmentInfo;
+            const before = content.substring(0, index);
+            const after = content.substring(index + length);
+            // Заменяем найденный кусок на обёрнутый в span с классом highlight
+            // Но нам нужно экранировать HTML-символы, чтобы не ломать отображение
+            const escapedMatched = matched.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const highlighted = `<span class="highlight">${escapedMatched}</span>`;
+            // Также экранируем before и after
+            const escBefore = before.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const escAfter = after.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return escBefore + highlighted + escAfter;
+        }
+
+        // Применить замену
+        function applyPatch() {
+            if (!currentContent) {
+                showMsg('Сначала загрузите файл!', 'error');
+                return;
+            }
+            const was = wasInput.value;
+            const become = becomeInput.value;
+            if (!was) {
+                showMsg('Введите фрагмент "БЫЛО" для поиска.', 'error');
+                return;
+            }
+
+            const strict = strictMode.checked;
+            const found = findFragment(was, currentContent, strict);
+
+            if (!found) {
+                showMsg('❌ Фрагмент "БЫЛО" не найден в текущем содержимом. Проверьте точность (регистр, пробелы, спецсимволы).', 'error');
+                return;
+            }
+
+            // Заменяем
+            const newContent = currentContent.substring(0, found.index) + become + currentContent.substring(found.index + found.length);
+            currentContent = newContent;
+
+            stats.innerHTML = `✅ Замена выполнена. Позиция: ${found.index}, длина замены: ${found.length} → ${become.length} символов. ${strict ? '(точный режим)' : '(нечёткий режим)'}`;
+            // Показываем предпросмотр с подсветкой нового фрагмента (заменённого)
+            // Найдём уже новый фрагмент (become) в обновлённом содержимом
+            const newFound = findFragment(become, currentContent, strict);
+            let previewHtml = currentContent;
+            if (newFound) {
+                // Подсветим только что вставленный кусок
+                previewHtml = highlightFragment(currentContent, newFound);
+                // Но если become содержит HTML-спецсимволы, мы уже экранируем внутри highlightFragment
+                // Однако highlightFragment экранирует всё, но нам нужно, чтобы become не экранировался дважды.
+                // Проще: покажем предпросмотр с подсветкой найденного become.
+                // Но так как мы уже заменили, используем highlightFragment с findFragment для become.
+                // Но учтём, что highlightFragment экранирует and, <, > - это нормально.
+                preview.innerHTML = previewHtml;
+            } else {
+                // Если не нашли (маловероятно), покажем просто текст
+                preview.textContent = currentContent;
+            }
+            resultBox.style.display = 'block';
+            showMsg('✔️ Замена успешно применена. Проверьте результат и скачайте новый файл или продолжайте править.', 'success');
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Проверка и подсветка "БЫЛО"
+        function checkAndHighlight() {
+            if (!currentContent) {
+                showMsg('Сначала загрузите файл!', 'error');
+                return;
+            }
+            const was = wasInput.value;
+            if (!was) {
+                showMsg('Введите фрагмент "БЫЛО" для поиска.', 'error');
+                return;
+            }
+            const strict = strictMode.checked;
+            const found = findFragment(was, currentContent, strict);
+            if (!found) {
+                showMsg('❌ Фрагмент "БЫЛО" не найден.', 'error');
+                return;
+            }
+            // Показываем предпросмотр с подсветкой
+            const highlighted = highlightFragment(currentContent, found);
+            preview.innerHTML = highlighted;
+            resultBox.style.display = 'block';
+            stats.innerHTML = `🔍 Найдено вхождение. Позиция: ${found.index}, длина: ${found.length} символов. ${strict ? '(точный режим)' : '(нечёткий режим)'}`;
+            showMsg('✔️ Фрагмент найден и подсвечен оранжевым.', 'success');
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Скачать с оригинальным именем
+        function downloadOriginal() {
+            if (!currentContent) {
+                showMsg('Нет содержимого для скачивания.', 'error');
+                return;
+            }
+            const ext = fileName.split('.').pop() || 'txt';
+            const baseName = fileName.replace(/\.[^.]+$/, '') || 'file';
+            const newFileName = baseName + '.' + ext; // оригинальное имя
+
+            const blob = new Blob([currentContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = newFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            showMsg(`⬇️ Скачивание файла "${newFileName}" начато.`, 'success');
+        }
+
+        // Скачать с суффиксом
+        function downloadPatched() {
+            if (!currentContent) {
+                showMsg('Нет содержимого для скачивания.', 'error');
+                return;
+            }
+            const ext = fileName.split('.').pop() || 'txt';
+            const baseName = fileName.replace(/\.[^.]+$/, '') || 'patched';
+            const now = new Date();
+            const ts = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+            const newFileName = baseName + '_patched_' + ts + '.' + ext;
+
+            const blob = new Blob([currentContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = newFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            showMsg(`⬇️ Скачивание файла "${newFileName}" начато.`, 'success');
+        }
+
+        function continueEditing() {
+            if (!currentContent) {
+                showMsg('Нет содержимого для продолжения.', 'error');
+                return;
+            }
+            wasInput.value = '';
+            becomeInput.value = '';
+            resultBox.style.display = 'none';
+            message.innerHTML = '';
+            showMsg('✏️ Продолжаем редактирование. Текущее содержимое сохранено, введите следующие "БЫЛО/СТАЛО".', 'success');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetToOriginal() {
+            if (!originalContent) {
+                showMsg('Нет загруженного файла для сброса.', 'error');
+                return;
+            }
+            currentContent = originalContent;
+            wasInput.value = '';
+            becomeInput.value = '';
+            resultBox.style.display = 'none';
+            message.innerHTML = '';
+            showMsg('🔄 Сброшено к исходному содержимому. Можно начать заново.', 'success');
+            fileInfo.textContent = `📂 Файл: ${fileName} (исходный) — сброшен.`;
+        }
+
+        // Обработчики
+        applyBtn.addEventListener('click', applyPatch);
+        checkBtn.addEventListener('click', checkAndHighlight);
+        downloadOriginalBtn.addEventListener('click', downloadOriginal);
+        downloadPatchedBtn.addEventListener('click', downloadPatched);
+        continueBtn.addEventListener('click', continueEditing);
+        resetBtn.addEventListener('click', resetToOriginal);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                applyPatch();
+            }
+        });
+
+        showMsg('Загрузите файл, введите фрагменты и нажмите "Применить замену" или Ctrl+Enter.', 'success');
+    })();
+</script>
+</body>
+</html>
