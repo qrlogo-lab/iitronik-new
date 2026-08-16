@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/auth/config.php';
 requireLogin();
-
 $user = getCurrentUser();
 
 // Если визард уже пройден — редирект в чат
@@ -16,7 +15,7 @@ if ($user['wizard_completed']) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Создание Итроника — Визард</title>
-    <link rel="icon" type="image/png"  href="/img/ii-logo.png">
+    <link rel="icon" type="image/png" href="/img/ii-logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Play:wght@400;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -37,34 +36,53 @@ if ($user['wizard_completed']) {
             flex-direction: column;
         }
         
-        .progress-bar {
+        /* ===== ИНДИКАТОР ОБУЧЕННОСТИ (вместо прогресс-бара шагов) ===== */
+        .training-bar {
             position: sticky;
             top: 0;
             background: rgba(10,0,51,0.95);
             backdrop-filter: blur(12px);
-            padding: 20px;
+            padding: 16px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
+            display: none; /* Скрыт на приветственном экране */
         }
-        .progress-label {
+        .training-label {
             font-size: 12px;
             color: rgba(255,255,255,0.6);
             margin-bottom: 8px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .progress-track {
+        .training-label .percent {
+            font-size: 16px;
+            font-weight: 700;
+            color: #21d4fd;
+            transition: all 0.3s;
+        }
+        .training-track {
             width: 100%;
             height: 6px;
             background: rgba(255,255,255,0.1);
             border-radius: 3px;
             overflow: hidden;
         }
-        .progress-fill {
+        .training-fill {
             height: 100%;
             background: linear-gradient(90deg, #21d4fd, #842ff3);
             border-radius: 3px;
-            transition: width 0.4s ease;
-            width: 16.66%; /* 1 из 6 шагов */
+            transition: width 0.6s ease;
+            width: 0%;
+        }
+        /* Анимация при обновлении процента */
+        .training-fill.pulse {
+            animation: pulse 0.5s ease;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
         }
         
         .content {
@@ -242,7 +260,6 @@ if ($user['wizard_completed']) {
             cursor: not-allowed;
         }
         
-        /* Скрытый инпут для файлов */
         #fileInputHidden { display: none; }
         
         /* Кнопки */
@@ -334,13 +351,34 @@ if ($user['wizard_completed']) {
             color: rgba(255,255,255,0.5);
             cursor: pointer;
         }
+        
+        /* ===== ФИНАЛЬНЫЙ ЭКРАН: Большой процент ===== */
+        .final-percent {
+            font-size: 72px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #21d4fd, #842ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+        .final-percent-label {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 <body>
 <div id="app">
-    <div class="progress-bar">
-        <div class="progress-label">Шаг <span id="currentStep">1</span> из 6</div>
-        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <!-- ИНДИКАТОР ОБУЧЕННОСТИ (вместо прогресс-бара шагов) -->
+    <div class="training-bar" id="trainingBar">
+        <div class="training-label">
+            <span>Обученность Итроника</span>
+            <span class="percent" id="trainingPercentText">0%</span>
+        </div>
+        <div class="training-track">
+            <div class="training-fill" id="trainingFill"></div>
+        </div>
     </div>
     <div class="content" id="content"></div>
 </div>
@@ -351,40 +389,67 @@ const USER_ID = <?= $user['id'] ?>;
 const USER_NAME = '<?= htmlspecialchars($user['name']) ?>';
 
 // ========== СОСТОЯНИЕ ==========
-let currentStep = 1;
 let wizardConversationHistory = [];
 let isWizardComplete = false;
 let uploadedFiles = [];
 let systemPrompt = '';
 let testMessages = [];
+let answersCount = 0;       // Количество ответов на вопросы
+let filesCount = 0;         // Количество загруженных файлов
 
-// ========== НАВИГАЦИЯ ==========
-function updateProgress(step) {
-    currentStep = step;
-    document.getElementById('currentStep').textContent = step;
-    document.getElementById('progressFill').style.width = (step / 6 * 100) + '%';
+// ========== ПРОЦЕНТ ОБУЧЕННОСТИ ==========
+function getTrainingPercent() {
+    // Формула: каждый ответ +1%, каждый файл +2%
+    // Максимум на этапе визарда: ~10-15%
+    return Math.min(answersCount * 1 + filesCount * 2, 15);
 }
-function showStep(step) {
+
+function updateTrainingIndicator() {
+    const percent = getTrainingPercent();
+    const fill = document.getElementById('trainingFill');
+    const text = document.getElementById('trainingPercentText');
+    if (fill && text) {
+        fill.style.width = percent + '%';
+        text.textContent = percent + '%';
+        // Анимация пульса при обновлении
+        fill.classList.remove('pulse');
+        void fill.offsetWidth; // Перезапуск анимации
+        fill.classList.add('pulse');
+    }
+}
+
+function showTrainingBar() {
+    document.getElementById('trainingBar').style.display = 'block';
+}
+
+function hideTrainingBar() {
+    document.getElementById('trainingBar').style.display = 'none';
+}
+
+// ========== НАВИГАЦИЯ (без нумерации шагов) ==========
+function showScreen(screenId) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById('step-' + step);
+    const el = document.getElementById(screenId);
     if (el) el.classList.add('active');
-    updateProgress(step);
 }
 
-// ========== ШАГ 1: ПРИВЕТСТВИЕ ==========
-function renderStep1() {
+// ========== ЭКРАН 1: ПРИВЕТСТВИЕ ==========
+function renderWelcome() {
+    hideTrainingBar(); // На приветствии индикатор не нужен
+    
     const html = `
-        <div class="step active" id="step-1">
+        <div class="step active" id="screen-welcome">
             <div class="welcome-screen">
                 <div class="welcome-icon">👋</div>
                 <h1>Добро пожаловать!</h1>
-                <p>Сейчас мы создадим вашего цифрового двойника — Итроника.</p>
+                <p style="font-size:16px; margin-bottom:10px;">За несколько минут вы создадите своего цифрового двойника — Итроника.</p>
+                <p style="font-size:14px; color:rgba(255,255,255,0.6); margin-bottom:20px;">Он сможет:</p>
                 <div class="feature-list">
                     <div class="feature-item"><i class="fas fa-comment-dots"></i><span><strong>Говорить вашим голосом</strong> — копировать ваш стиль общения</span></div>
                     <div class="feature-item"><i class="fas fa-pen-fancy"></i><span><strong>Помогать писать</strong> письма, тексты, посты в вашем стиле</span></div>
                     <div class="feature-item"><i class="fas fa-clock"></i><span><strong>Экономить время</strong> — до 5 часов в неделю на рутине</span></div>
                 </div>
-                <p style="font-size:13px; color:rgba(255,255,255,0.5);">Процесс займёт 10-15 минут.</p>
+                <p style="font-size:13px; color:rgba(255,255,255,0.5);">Процесс займёт 10-15 минут. Итроник начнёт обучаться сразу.</p>
                 <div class="btn-container">
                     <button class="btn btn-primary" onclick="startWizard()"><i class="fas fa-rocket"></i> Начать</button>
                 </div>
@@ -395,14 +460,15 @@ function renderStep1() {
 }
 
 function startWizard() {
-    renderStep2();
-    showStep(2);
+    showTrainingBar(); // Показываем индикатор обученности
+    updateTrainingIndicator();
+    renderSurvey();
 }
 
-// ========== ШАГ 2: ОПРОСНИК (с AI-агентом) ==========
-function renderStep2() {
+// ========== ЭКРАН 2: ОПРОСНИК (с AI-агентом) ==========
+function renderSurvey() {
     const html = `
-        <div class="step" id="step-2">
+        <div class="step" id="screen-survey">
             <div class="chat-screen" id="chatContainer"></div>
             <div class="chat-input-wrapper" id="wizardInputWrapper" style="display:none;">
                 <textarea id="answerInput" placeholder="Введите ваш ответ..." rows="1"></textarea>
@@ -414,7 +480,6 @@ function renderStep2() {
         </div>
     `;
     document.getElementById('content').innerHTML = html;
-    // Показываем поле ввода после первого вопроса
     setTimeout(() => askWizardQuestion(), 300);
 }
 
@@ -426,8 +491,10 @@ function handleFileAttach(event) {
             continue;
         }
         uploadedFiles.push(file);
+        filesCount++;
         addFileToMiniList(file);
         uploadFile(file);
+        updateTrainingIndicator(); // Обновляем процент
     }
     event.target.value = '';
 }
@@ -446,7 +513,9 @@ function addFileToMiniList(file) {
 
 function removeFileFromList(fileName) {
     uploadedFiles = uploadedFiles.filter(f => f.name !== fileName);
+    filesCount = Math.max(0, filesCount - 1);
     renderMiniFiles();
+    updateTrainingIndicator();
 }
 
 function renderMiniFiles() {
@@ -485,29 +554,31 @@ async function askWizardQuestion() {
         hideTypingIndicator();
         if (data.question) {
             let text = data.question;
-            addAssistantMessage(text);            if (text.includes('[COMPLETE]')) {
-                const clean = text.replace('[COMPLETE]', '').trim();
-                const lastMsg = document.querySelector('#chatContainer .chat-message:last-child .chat-bubble');
-                if (lastMsg) lastMsg.innerHTML = marked.parse(clean);
+            
+            // Проверяем [COMPLETE] ДО отображения
+            if (text.includes('[COMPLETE]')) {
+                const clean = text.replace(/\[COMPLETE\]/g, '').trim();
+                addAssistantMessage(clean);
                 isWizardComplete = true;
                 document.getElementById('wizardInputWrapper').style.display = 'none';
                 setTimeout(() => {
-                    renderStep4(); // Генерируем промпт (шаг 4)
-                    showStep(4);
+                    renderProcessing();
                 }, 1500);
                 return;
             }
+            
+            // Обычный вопрос
+            addAssistantMessage(text);
             document.getElementById('wizardInputWrapper').style.display = 'flex';
             document.getElementById('answerInput').focus();
             wizardConversationHistory.push({ role: 'assistant', content: text });
         } else {
-            // если нет ответа – принудительно завершаем
             finishWizardSurvey();
         }
     } catch (e) {
         console.error(e);
         hideTypingIndicator();
-        alert('Ошибка, переходим к следующему шагу.');
+        alert('Ошибка, переходим к следующему этапу.');
         finishWizardSurvey();
     }
 }
@@ -515,12 +586,11 @@ async function askWizardQuestion() {
 async function submitAnswer() {
     const input = document.getElementById('answerInput');
     let answer = input.value.trim();
-    
-    // 📎 Если есть прикреплённые файлы – читаем их содержимое
+
+    // Если есть прикреплённые файлы – читаем их содержимое
     if (uploadedFiles.length > 0) {
         let fileContents = [];
         for (let file of uploadedFiles) {
-            // Для текстовых файлов (.txt) читаем содержимое
             if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
                 try {
                     const text = await file.text();
@@ -530,35 +600,31 @@ async function submitAnswer() {
                     fileContents.push(`⚠️ Не удалось прочитать файл: ${file.name}`);
                 }
             } else {
-                // Для docx/pdf пока просто упоминаем, что файл загружен на сервер
                 fileContents.push(`📎 Файл: ${file.name} (загружен на сервер, будет использован при обучении)`);
             }
         }
-        // Добавляем содержимое файлов к сообщению
         if (fileContents.length > 0) {
-            answer += '\n\n--- Прикреплённые файлы ---\n' + fileContents.join('\n\n');
+            answer += '\n--- Прикреплённые файлы ---\n' + fileContents.join('\n');
         }
-        // Очищаем список файлов после отправки
         uploadedFiles = [];
         renderMiniFiles();
     }
-    
-    // Если после добавления файлов сообщение всё равно пустое – просим ввести текст
+
     if (!answer || !answer.trim()) {
         alert('Введите сообщение или прикрепите файл');
         return;
     }
-    
-    // Показываем сообщение пользователя в чате
+
     addUserMessage(answer);
     input.value = '';
     document.getElementById('wizardInputWrapper').style.display = 'none';
     
-    // Сохраняем в историю
+    // Увеличиваем счётчик ответов и обновляем процент
+    answersCount++;
+    updateTrainingIndicator();
+    
     wizardConversationHistory.push({ role: 'user', content: answer });
     await saveAnswer(wizardConversationHistory.length, answer);
-    
-    // Запрашиваем следующий вопрос
     setTimeout(() => askWizardQuestion(), 500);
 }
 
@@ -566,10 +632,9 @@ function finishWizardSurvey() {
     if (isWizardComplete) return;
     isWizardComplete = true;
     document.getElementById('wizardInputWrapper').style.display = 'none';
-    addAssistantMessage('✅ Отлично, я понял твой стиль! Переходим к созданию Итроника.');
+    addAssistantMessage('✅ Отлично, я понял Ваш стиль! Переходим к созданию Итроника.');
     setTimeout(() => {
-        renderStep4(); // ← ИСПРАВЛЕНО
-        showStep(4);   // ← ИСПРАВЛЕНО
+        renderProcessing();
     }, 1500);
 }
 
@@ -611,7 +676,6 @@ function addUserMessage(text) {
     container.scrollTop = container.scrollHeight;
 }
 
-let typingTimer;
 function showTypingIndicator() {
     const container = document.getElementById('chatContainer');
     if (!container) return;
@@ -630,11 +694,9 @@ function hideTypingIndicator() {
     if (el) el.remove();
 }
 
-// ========== ШАГ 3: ПРОПУЩЕН (объединён с шагом 2) ==========
-
-// ========== ШАГ 4: ОБРАБОТКА (генерация промпта) ==========
-function renderStep4() {
-    showLoading('Создаём вашего Итроника...<br><small>Анализируем материалы и генерируем промпт</small>');
+// ========== ЭКРАН 3: ОБРАБОТКА (генерация промпта) ==========
+function renderProcessing() {
+    showLoading('Создаём первую версию вашего Итроника...<br><small>Итроник изучает ваш стиль общения. Это займёт 1-2 минуты.</small>');
     processUserData();
 }
 
@@ -645,8 +707,7 @@ async function processUserData() {
         updateLoadingText('Сохранение настроек...');
         await saveSystemPrompt();
         setTimeout(() => {
-            renderStep5();
-            showStep(5);
+            renderTestChat();
         }, 1500);
     } catch (e) {
         console.error(e);
@@ -663,7 +724,7 @@ async function generateSystemPrompt() {
     const resp = await fetch('/api.php?action=wizard_generate_prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: USER_ID, user_name: USER_NAME }) // передаём имя
+        body: JSON.stringify({ user_id: USER_ID, user_name: USER_NAME })
     });
     const data = await resp.json();
     if (data.system_prompt) {
@@ -679,54 +740,45 @@ async function saveSystemPrompt() {
     });
 }
 
-// ========== ШАГ 5: ПРОВЕРКА ИТРОНИКА ==========
-function renderStep5() {
+// ========== ЭКРАН 4: ТЕСТОВЫЙ ЧАТ ==========
+function renderTestChat() {
     const html = `
-        <div class="step" id="step-5">
+        <div class="step" id="screen-test">
             <div class="chat-screen">
-                <h2 style="text-align:center; margin-bottom:20px; color:#21d4fd;">🎉 Твой Итроник готов!</h2>
-                <p style="text-align:center; font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:30px;">
-                    Проверь, насколько он похож на тебя. Задай несколько вопросов.
+                <h2 style="text-align:center; margin-bottom:10px; color:#21d4fd;">✨ Изначальная версия вашего Итроника готова!</h2>
+                <p style="text-align:center; font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:20px;">
+                    Это первая версия — она будет становиться лучше с каждым обучением.
                 </p>
+                
+                <!-- Кнопки-примеры вопросов -->
+                <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px;">
+                    <button onclick="sendExampleQuestion('Привет! Расскажи о себе')" style="font-size:12px; padding:8px 14px; border-radius:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:white; cursor:pointer;">👋 Расскажи о себе</button>
+                    <button onclick="sendExampleQuestion('Чем ты занимаешься?')" style="font-size:12px; padding:8px 14px; border-radius:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:white; cursor:pointer;">💼 Чем занимаешься?</button>
+                    <button onclick="sendExampleQuestion('Напиши письмо от моего имени')" style="font-size:12px; padding:8px 14px; border-radius:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:white; cursor:pointer;">✍️ Напиши письмо</button>
+                </div>
+                
                 <div id="testChatContainer" class="chat-screen"></div>
                 <div class="chat-input-wrapper">
-                    <textarea id="testInput" placeholder="Напиши что-нибудь..." rows="1"></textarea>
-                    <button class="action-btn" onclick="document.getElementById('fileInputTest').click()" title="Прикрепить файл">📎</button>
+                    <textarea id="testInput" placeholder="Напишите что-нибудь..." rows="1"></textarea>
                     <button class="send-btn" onclick="sendTestMessage()">➤</button>
                 </div>
-                <div id="testUploadedFilesMini" class="uploaded-files-mini"></div>
-                <input type="file" id="fileInputTest" multiple accept=".txt,.docx,.pdf" onchange="handleTestFileAttach(event)">
             </div>
             <div class="btn-container" style="margin-top:30px;">
-                <button class="btn btn-secondary" onclick="askForRevision()">⚙️ Нужна доработка</button>
-                <button class="btn btn-primary" onclick="completeWizard()">✅ Доволен результатом</button>
+                <button class="btn btn-primary" onclick="completeWizard()">✅ Всё хорошо</button>
+                <button class="btn btn-secondary" onclick="askForRevision()">🔧 Можно ещё улучшить</button>
             </div>
         </div>
     `;
     document.getElementById('content').innerHTML = html;
-    // Показываем приветствие
+    
     setTimeout(() => {
-        addTestAssistantMessage('Привет! Я твой Итроник. Задай мне вопрос или попроси что-нибудь написать.');
+        addTestAssistantMessage('Привет! Я ваш Итроник. Я ещё не очень умный, но скоро научусь. Задайте мне вопрос или попросите чего-нибудь написать, чтобы увидеть, что я могу.');
     }, 200);
 }
 
-function handleTestFileAttach(event) {
-    const files = event.target.files;
-    for (let file of files) {
-        if (file.size > 100 * 1024 * 1024) { alert(`Файл ${file.name} слишком большой`); continue; }
-        uploadedFiles.push(file);
-        addFileToTestMiniList(file);
-        uploadFile(file);
-    }
-    event.target.value = '';
-}
-function addFileToTestMiniList(file) {
-    const container = document.getElementById('testUploadedFilesMini');
-    if (!container) return;
-    const div = document.createElement('div');
-    div.className = 'uploaded-file-mini';
-    div.innerHTML = `📄 ${file.name} (${formatFileSize(file.size)}) <button class="remove" onclick="this.parentElement.remove()">✕</button>`;
-    container.appendChild(div);
+function sendExampleQuestion(question) {
+    document.getElementById('testInput').value = question;
+    sendTestMessage();
 }
 
 function addTestAssistantMessage(text) {
@@ -791,27 +843,24 @@ function hideTestTypingIndicator() {
     if (el) el.remove();
 }
 
-// ========== ШАГ 6: ДОРАБОТКА ==========
+// ========== ЭКРАН 5: ДОРАБОТКА ==========
 function askForRevision() {
-    renderStep6();
-    showStep(6);
-}
-function renderStep6() {
     const html = `
-        <div class="step" id="step-6">
-            <h2 style="text-align:center; margin-bottom:20px; color:#21d4fd;">⚙️ Доработка Итроника</h2>
-            <p style="text-align:center; font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:30px;">Что нужно исправить? Опиши подробно:</p>
+        <div class="step" id="screen-revision">
+            <h2 style="text-align:center; margin-bottom:20px; color:#21d4fd;">🔧 Доработка Итроника</h2>
+            <p style="text-align:center; font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:30px;">Что нужно исправить? Опишите подробно:</p>
             <div style="margin-bottom:20px;">
                 <textarea id="revisionText" style="width:100%; min-height:120px; padding:14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:white; font-size:14px; resize:vertical;" placeholder="Например: слишком формально, не использует мои любимые фразы..."></textarea>
             </div>
             <div class="btn-container">
-                <button class="btn btn-secondary" onclick="renderStep5(); showStep(5);">← Назад</button>
+                <button class="btn btn-secondary" onclick="renderTestChat()">← Назад</button>
                 <button class="btn btn-primary" onclick="updatePrompt()"><i class="fas fa-sync-alt"></i> Обновить</button>
             </div>
         </div>
     `;
     document.getElementById('content').innerHTML = html;
 }
+
 async function updatePrompt() {
     const text = document.getElementById('revisionText').value.trim();
     if (!text) { alert('Опишите, что нужно исправить'); return; }
@@ -827,42 +876,53 @@ async function updatePrompt() {
             systemPrompt = data.system_prompt;
             await saveSystemPrompt();
             testMessages = [];
-            renderStep5();
-            showStep(5);
+            renderTestChat();
         }
     } catch (e) { alert('Ошибка при обновлении'); }
 }
 
-// ========== ШАГ 7: ЗАВЕРШЕНИЕ ==========
+// ========== ЭКРАН 6: ЗАВЕРШЕНИЕ ==========
 async function completeWizard() {
     showLoading('Завершаем настройку...');
     try {
+        const finalPercent = getTrainingPercent() + 5; // +5% база за завершение визарда
+        
         const resp = await fetch('/api.php?action=wizard_complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: USER_ID })
+            body: JSON.stringify({ 
+                user_id: USER_ID,
+                training_percent: finalPercent  // ← Передаём процент на сервер
+            })
         });
         const data = await resp.json();
         if (data.status === 'success') {
-            renderStep7();
-            showStep(7);
+            renderFinal(finalPercent);
         }
     } catch (e) { alert('Ошибка при завершении'); }
 }
-function renderStep7() {
+
+function renderFinal(percent) {
+    hideTrainingBar(); // Скрываем индикатор на финальном экране
+    
     const html = `
-        <div class="step" id="step-7">
+        <div class="step" id="screen-final">
             <div class="welcome-screen">
                 <div class="welcome-icon">🎉</div>
-                <h1>Готово!</h1>
-                <p>Твой Итроник готов к работе.</p>
-                <div class="feature-list">
-                    <div class="feature-item"><i class="fas fa-check-circle" style="color:#4CAF50;"></i><span>Отвечает на письма в твоём стиле</span></div>
-                    <div class="feature-item"><i class="fas fa-check-circle" style="color:#4CAF50;"></i><span>Пишет тексты, посты, черновики</span></div>
-                    <div class="feature-item"><i class="fas fa-check-circle" style="color:#4CAF50;"></i><span>Помогает в рутинных задачах</span></div>
-                </div>
+                <h1>Первая версия готова!</h1>
+                
+                <div class="final-percent">${percent}%</div>
+                <div class="final-percent-label">Обученность вашего Итроника</div>
+                
+                <p style="font-size:14px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:20px;">
+                    Ваш Итроник создан и готов к работе. С каждым новым диалогом и обучением он будет становиться всё больше похож на вас.
+                </p>
+                <p style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:30px;">
+                    Вы всегда сможете дообучить его в настройках.
+                </p>
+                
                 <div class="btn-container">
-                    <button class="btn btn-primary" onclick="window.location.href='/dashboard.php?refresh=1'"><i class="fas fa-home"></i> Перейти в кабинет</button>
+                    <button class="btn btn-primary" onclick="window.location.href='/dashboard.php?refresh=1'"><i class="fas fa-rocket"></i> Начать пользоваться</button>
                 </div>
             </div>
         </div>
@@ -877,7 +937,7 @@ function showLoading(text) {
 }
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
-renderStep1();
+renderWelcome();
 </script>
 </body>
 </html>
